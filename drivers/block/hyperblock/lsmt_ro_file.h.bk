@@ -1,19 +1,18 @@
 #ifndef __LSMT_RO_H__
 #define __LSMT_RO_H__
+// 
+//#include <stdio.h>
+//#include <stdlib.h>
+//#include <stdint.h>
+//
 
-
-
+#include <linux/err.h>
+#include <linux/printk.h>
 #ifndef HBDEBUG
 #define HBDEBUG (1)
 #endif
 
 #ifndef __KERNEL__
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdint.h>
-#include <stdbool.h>
-
 #define PRINT_INFO(fmt, ...)                                     \
         printf("\033[33m|INFO |\033[0mline: %d|%s: " fmt "\n", \
                __LINE__, __FUNCTION__, __VA_ARGS__)
@@ -26,10 +25,6 @@
 	assert(exp)
 	
 #else
-
-#include <linux/err.h>
-#include <linux/printk.h>
-
 #define PRINT_INFO(fmt, ...)                                     \
 	do { if ((HBDEBUG)) \
 	printk(KERN_INFO fmt, ## __VA_ARGS__);} while (0)
@@ -74,26 +69,28 @@ struct lsmt_ro_index {
         struct segment_mapping mapping[0];
 };
 
+
+
 struct lsmt_ro_file {
         struct lsmt_ro_index *m_index;
         uint64_t m_vsize;
         bool m_ownership;       
         size_t m_files_count;
         size_t MAX_IO_SIZE;
-        void* m_files[0];
+        int m_files[0];
 };
 
 int set_max_io_size(struct lsmt_ro_file *file, size_t size);
 size_t get_max_io_size(const struct lsmt_ro_file *file );
 
 // open a lsmt layer
-struct lsmt_ro_file* open_file(void* fd, bool ownership);
+struct lsmt_ro_file* open_file(int fd, bool ownership);
 
 // open multi LSMT layers
-struct lsmt_ro_file *open_files(void **files, size_t n, bool ownership);
+struct lsmt_ro_file *open_files(int *files, size_t n, bool ownership);
 
 size_t lsmt_pread(struct lsmt_ro_file *file, 
-                void *buf, size_t nbytes, off_t offset);
+                char *buf, size_t count, uint64_t offset);
 
         
 #endif

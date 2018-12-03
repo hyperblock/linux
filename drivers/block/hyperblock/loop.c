@@ -77,7 +77,6 @@
 #include <linux/falloc.h>
 #include <linux/uio.h>
 #include "loop.h"
-
 #include <linux/uaccess.h>
 
 static DEFINE_IDR(loop_index_idr);
@@ -899,8 +898,118 @@ static int loop_prepare_queue(struct loop_device *lo)
 	return 0;
 }
 
+
+void init_lsmt_ro_file(struct lsmt_ro_file *lrf)
+{
+	int size = 0;
+
+
+
+}
+
 static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 		       struct block_device *bdev, unsigned int arg)
+{
+	struct file	*file;
+	struct inode	*inode;
+	struct address_space *mapping;
+	int		lo_flags = 0;
+	int		error;
+	loff_t		size;
+
+	/* This is safe, since we have a reference from open(). */
+	__module_get(THIS_MODULE);
+
+	error = -EBADF;
+	file = fget(arg);
+	if (!file)
+		goto out;
+
+	error = -EBUSY;
+	if (lo->lo_state != Lo_unbound)
+		goto out_putf;
+
+	error = loop_validate_file(file, bdev);
+	if (error)
+		goto out_putf;
+
+	mapping = file->f_mapping;
+	inode = mapping->host;
+
+	if (!(file->f_mode & FMODE_WRITE) || !(mode & FMODE_WRITE) ||
+	    !file->f_op->write_iter)
+		lo_flags |= LO_FLAGS_READ_ONLY;
+
+	error = -EFBIG;
+	size = get_loop_size(lo, file);
+	if ((loff_t)(sector_t)size != size)
+		goto out_putf;
+	error = loop_prepare_queue(lo);
+	if (error)
+		goto out_putf;
+
+	error = 0;
+
+	set_device_ro(bdev, (lo_flags & LO_FLAGS_READ_ONLY) != 0);
+
+	lo->use_dio = false;
+	lo->lo_device = bdev;
+	lo->lo_flags = lo_flags;
+	lo->lo_backing_file = file;
+	lo->transfer = NULL;
+	lo->ioctl = NULL;
+	lo->lo_sizelimit = 0;
+	lo->old_gfp_mask = mapping_gfp_mask(mapping);
+	mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
+
+	if (!(lo_flags & LO_FLAGS_READ_ONLY) && file->f_op->fsync)
+		blk_queue_write_cache(lo->lo_queue, true, false);
+
+	loop_update_dio(lo);
+	set_capacity(lo->lo_disk, size);
+	bd_set_size(bdev, size << 9);
+	loop_sysfs_init(lo);
+	/* let user-space know about the new size */
+	kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
+
+	set_blocksize(bdev, S_ISBLK(inode->i_mode) ?
+		      block_size(inode->i_bdev) : PAGE_SIZE);
+
+	lo->lo_state = Lo_bound;
+	if (part_shift)
+		lo->lo_flags |= LO_FLAGS_PARTSCAN;
+	if (lo->lo_flags & LO_FLAGS_PARTSCAN)
+		loop_reread_partitions(lo, bdev);
+
+	/* Grab the block_device to prevent its destruction after we
+	 * put /dev/loopXX inode. Later in loop_clr_fd() we bdput(bdev).
+	 */
+	bdgrab(bdev);
+	return 0;
+
+ out_putf:
+	fput(file);
+ out:
+	/* This is safe: open() is still holding a reference. */
+	module_put(THIS_MODULE);
+	return error;
+}
+
+// 
+static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)
+{
+	int files[IMAGE_RO_LAYERS];
+	struct lsmt_ro_file *ro = NULL;
+	size_t i;
+	ro = open_files(files, cnt, true);
+	
+	for(i=0;i<)
+}
+
+
+static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
+		       struct block_device *bdev, 
+		const struct loop_mfile_fds __user *arg)
 {
 	struct file	*file;
 	struct inode	*inode;
@@ -1108,6 +1217,93 @@ static int loop_clr_fd(struct loop_device *lo)
 	fput(filp);
 	return 0;
 }
+
+static int loop_clr_fd_mfile(struct loop_device *lo)
+{
+	struct file *filp = lo->lo_backing_file;
+	gfp_t gfp = lo->old_gfp_mask;
+	struct block_device *bdev = lo->lo_device;
+
+	if (lo->lo_state != Lo_bound)
+		return -ENXIO;
+
+	/*
+	 * If we've explicitly asked to tear down the loop device,
+	 * and it has an elevated reference count, set it for auto-teardown when
+	 * the last reference goes away. This stops $!~#$@ udev from
+	 * preventing teardown because it decided that it needs to run blkid on
+	 * the loopback device whenever they appear. xfstests is notorious for
+	 * failing tests because blkid via udev races with a losetup
+	 * <dev>/do something like mkfs/losetup -d <dev> causing the losetup -d
+	 * command to fail with EBUSY.
+	 */
+	if (atomic_read(&lo->lo_refcnt) > 1) {
+		lo->lo_flags |= LO_FLAGS_AUTOCLEAR;
+		mutex_unlock(&lo->lo_ctl_mutex);
+		return 0;
+	}
+
+	if (filp == NULL)
+		return -EINVAL;
+
+	/* freeze request queue during the transition */
+	blk_mq_freeze_queue(lo->lo_queue);
+
+	spin_lock_irq(&lo->lo_lock);
+	lo->lo_state = Lo_rundown;
+	lo->lo_backing_file = NULL;
+	spin_unlock_irq(&lo->lo_lock);
+
+	loop_release_xfer(lo);
+	lo->transfer = NULL;
+	lo->ioctl = NULL;
+	lo->lo_device = NULL;
+	lo->lo_encryption = NULL;
+	lo->lo_offset = 0;
+	lo->lo_sizelimit = 0;
+	lo->lo_encrypt_key_size = 0;
+	memset(lo->lo_encrypt_key, 0, LO_KEY_SIZE);
+	memset(lo->lo_crypt_name, 0, LO_NAME_SIZE);
+	memset(lo->lo_file_name, 0, LO_NAME_SIZE);
+	blk_queue_logical_block_size(lo->lo_queue, 512);
+	blk_queue_physical_block_size(lo->lo_queue, 512);
+	blk_queue_io_min(lo->lo_queue, 512);
+	if (bdev) {
+		bdput(bdev);
+		invalidate_bdev(bdev);
+		bdev->bd_inode->i_mapping->wb_err = 0;
+	}
+	set_capacity(lo->lo_disk, 0);
+	loop_sysfs_exit(lo);
+	if (bdev) {
+		bd_set_size(bdev, 0);
+		/* let user-space know about this change */
+		kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
+	}
+	mapping_set_gfp_mask(filp->f_mapping, gfp);
+	lo->lo_state = Lo_unbound;
+	/* This is safe: open() is still holding a reference. */
+	module_put(THIS_MODULE);
+	blk_mq_unfreeze_queue(lo->lo_queue);
+
+	if (lo->lo_flags & LO_FLAGS_PARTSCAN && bdev)
+		loop_reread_partitions(lo, bdev);
+	lo->lo_flags = 0;
+	if (!part_shift)
+		lo->lo_disk->flags |= GENHD_FL_NO_PART_SCAN;
+	loop_unprepare_queue(lo);
+	mutex_unlock(&lo->lo_ctl_mutex);
+	/*
+	 * Need not hold lo_ctl_mutex to fput backing file.
+	 * Calling fput holding lo_ctl_mutex triggers a circular
+	 * lock dependency possibility warning as fput can take
+	 * bd_mutex which is usually taken before lo_ctl_mutex.
+	 */
+	fput(filp);
+	return 0;
+}
+
+
 
 static int
 loop_set_status(struct loop_device *lo, const struct loop_info64 *info)
@@ -1406,6 +1602,8 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 	case LOOP_SET_FD:
 		err = loop_set_fd(lo, mode, bdev, arg);
 		break;
+	case LOOP_SET_FD_MFILE:
+		err = loop_set_fd_mfile(lo,mode,bdev,(struct loop_mfile_fds __user *)arg);
 	case LOOP_CHANGE_FD:
 		err = loop_change_fd(lo, bdev, arg);
 		break;
@@ -1415,6 +1613,10 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		if (!err)
 			goto out_unlocked;
 		break;
+	case LOOP_CLR_FD_MFILE:
+		err = loop_clr_fd_mfile(lo);
+		if (!err)
+			goto out_unlocked;
 	case LOOP_SET_STATUS:
 		err = -EPERM;
 		if ((mode & FMODE_WRITE) || capable(CAP_SYS_ADMIN))

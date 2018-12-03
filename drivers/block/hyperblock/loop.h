@@ -16,6 +16,7 @@
 #include <linux/mutex.h>
 #include <linux/kthread.h>
 #include <uapi/linux/loop.h>
+#include "lsmt_ro_file.h"
 
 /* Possible states of device */
 enum {
@@ -47,6 +48,7 @@ struct loop_device {
 				 unsigned long arg); 
 
 	struct file *	lo_backing_file;
+	struct lsmt_ro_file* lo_lsmt_ro_file;
 	struct block_device *lo_device;
 	void		*key_data; 
 

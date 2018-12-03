@@ -28,6 +28,19 @@ enum {
 #include <asm/posix_types.h>	/* for __kernel_old_dev_t */
 #include <linux/types.h>	/* for __u64 */
 
+//for hyperblock ioctl parameter
+struct loop_mfile {
+        uint8_t **filenames;
+        uint8_t mfcnt;
+};
+
+struct loop_mfile_fds {
+        int * fds;
+        uint8_t mfcnt;
+};
+
+
+
 /* Backwards compatibility version */
 struct loop_info {
 	int		   lo_number;		/* ioctl r/o */
@@ -55,6 +68,8 @@ struct loop_info64 {
 	__u32		   lo_encrypt_key_size;		/* ioctl w/o */
 	__u32		   lo_flags;			/* ioctl r/o */
 	__u8		   lo_file_name[LO_NAME_SIZE];
+	__u8		   **lo_file_names;		/* for hyperblock, backing file names */
+	__u8		   mfcnt;			/* for hyperblock, backing file number */
 	__u8		   lo_crypt_name[LO_NAME_SIZE];
 	__u8		   lo_encrypt_key[LO_KEY_SIZE]; /* ioctl w/o */
 	__u64		   lo_init[2];
@@ -90,6 +105,21 @@ struct loop_info64 {
 #define LOOP_SET_CAPACITY	0x4C07
 #define LOOP_SET_DIRECT_IO	0x4C08
 #define LOOP_SET_BLOCK_SIZE	0x4C09
+
+/*
+* IOCTL defined for hyperblock --- 
+*/
+
+#define LOOP_SET_FD_MFILE		0x4C10
+#define LOOP_CLR_FD_MFILE		0x4C11
+#define LOOP_SET_STATUS_MFILE		0x4C12
+#define LOOP_GET_STATUS_MFILE		0x4C13
+#define LOOP_SET_STATUS64_MFILE		0x4C14
+#define LOOP_GET_STATUS64_MFILE		0x4C15
+#define LOOP_CHANGE_FD_MFILE		0x4C16
+#define LOOP_SET_CAPACITY_MFILE		0x4C17
+#define LOOP_SET_DIRECT_IO_MFILE	0x4C18
+#define LOOP_SET_BLOCK_SIZE_MFILE	0x4C19
 
 /* /dev/loop-control interface */
 #define LOOP_CTL_ADD		0x4C80
