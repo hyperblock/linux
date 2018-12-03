@@ -481,4 +481,5 @@ config BLK_DEV_RSXX
 	  To compile this driver as a module, choose M here: the
 	  module will be called rsxx.
 
+source "drivers/block/hyperblock/Kconfig"
 endif # BLK_DEV

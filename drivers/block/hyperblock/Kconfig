@@ -1,0 +1,7 @@
+config HYPERBLOCK
+tristate "a modified loop driver for hyperblock" 
+depends on BLK_DEV_LOOP
+default n if BLK_DEV_LOOP 
+help
+  mod loop for hyperblock.
+
