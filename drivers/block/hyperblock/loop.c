@@ -998,12 +998,25 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 // 
 static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)
 {
+	//first we have to copy_from_user
+
+	const int IMAGE_RO_LAYERS = arg->mfcnt;
+	struct loop_mfile_fds  *mfds;
+	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
+	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
+	
+	if(copy_from_user(mfds,arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
+
+	
 	int files[IMAGE_RO_LAYERS];
 	struct lsmt_ro_file *ro = NULL;
 	size_t i;
 	ro = open_files(files, cnt, true);
 	
-	for(i=0;i<)
+	for(i=0;i<arg->mfcnt;i++)
+	{
+		
+	}
 }
 
 

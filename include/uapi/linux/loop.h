@@ -30,13 +30,13 @@ enum {
 
 //for hyperblock ioctl parameter
 struct loop_mfile {
-        uint8_t **filenames;
         uint8_t mfcnt;
+        uint8_t **filenames;
 };
 
 struct loop_mfile_fds {
-        int * fds;
         uint8_t mfcnt;
+        int fds[0];
 };
 
 
@@ -68,8 +68,9 @@ struct loop_info64 {
 	__u32		   lo_encrypt_key_size;		/* ioctl w/o */
 	__u32		   lo_flags;			/* ioctl r/o */
 	__u8		   lo_file_name[LO_NAME_SIZE];
-	__u8		   **lo_file_names;		/* for hyperblock, backing file names */
-	__u8		   mfcnt;			/* for hyperblock, backing file number */
+	struct loop_mfile  mfile;
+	//__u8		   **lo_file_names;		/* for hyperblock, backing file names */
+	//__u8		   mfcnt;			/* for hyperblock, backing file number */
 	__u8		   lo_crypt_name[LO_NAME_SIZE];
 	__u8		   lo_encrypt_key[LO_KEY_SIZE]; /* ioctl w/o */
 	__u64		   lo_init[2];
