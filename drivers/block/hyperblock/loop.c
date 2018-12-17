@@ -1506,6 +1506,16 @@ loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)
 }
 
 static int
+loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user *arg)
+{
+	struct loop_info64 info64;
+
+	if (copy_from_user(&info64, arg, sizeof (struct loop_info64)))
+		return -EFAULT;
+	return loop_set_status(lo, &info64);
+}
+
+static int
 loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {
 	struct loop_info info;
 	struct loop_info64 info64;
@@ -1627,6 +1637,13 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 			err = loop_set_status64(lo,
 					(struct loop_info64 __user *) arg);
 		break;
+	case LOOP_SET_STATUS64_MFILE:
+		err = -EPERM;
+		if ((mode & FMODE_WRITE) || capable(CAP_SYS_ADMIN))
+			err = loop_set_status64_mfile(lo,
+					(struct loop_info64 __user *) arg);
+		break;
+
 	case LOOP_GET_STATUS64:
 		err = loop_get_status64(lo, (struct loop_info64 __user *) arg);
 		/* loop_get_status() unlocks lo_ctl_mutex */
