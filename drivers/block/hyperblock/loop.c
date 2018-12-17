@@ -898,15 +898,6 @@ static int loop_prepare_queue(struct loop_device *lo)
 	return 0;
 }
 
-
-void init_lsmt_ro_file(struct lsmt_ro_file *lrf)
-{
-	int size = 0;
-
-
-
-}
-
 static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 		       struct block_device *bdev, unsigned int arg)
 {
@@ -998,25 +989,26 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 // 
 static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)
 {
-	//first we have to copy_from_user
-
 	const int IMAGE_RO_LAYERS = arg->mfcnt;
-	struct loop_mfile_fds  *mfds;
+	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS);
 	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
 	
-	if(copy_from_user(mfds,arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
-
+	if(copy_from_user(mfds, arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
 	
-	int files[IMAGE_RO_LAYERS];
 	struct lsmt_ro_file *ro = NULL;
-	size_t i;
-	ro = open_files(files, cnt, true);
-	
-	for(i=0;i<arg->mfcnt;i++)
-	{
-		
-	}
+	ro = open_files(mfds->fds, IMAGE_RO_LAYERS, true);
+	PRINT_INFO("create lsmt_ro_file object. addr: 0x%lx", (unsigned long)(void *)ro);	
+        
+        if (ro == NULL) {
+                PRINT_INFO("create lsmt_ro_file object failed, func return.%c",0);
+		//leaving closing file job to userspace losetup
+                return NULL;
+        }
+ 
+	set_max_io_size(ro,  512  * 1024);
+	PRINT_INFO("file->MAX_IO_SIZE: %llu", ro->MAX_IO_SIZE);
+	return ro;
 }
 
 
@@ -1024,38 +1016,27 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 		       struct block_device *bdev, 
 		const struct loop_mfile_fds __user *arg)
 {
-	struct file	*file;
-	struct inode	*inode;
-	struct address_space *mapping;
 	int		lo_flags = 0;
 	int		error;
 	loff_t		size;
 
+	struct lsmt_ro_file	*lsmtfile;
+
+	lsmtfile = loop_init_lsmtfile(lo, arg);
+	error = -EBADF;
+	if(lsmtfile==NULL) goto out;
+	lo->lo_lsmt_ro_file = lsmtfile;
+
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
-
-	error = -EBADF;
-	file = fget(arg);
-	if (!file)
-		goto out;
 
 	error = -EBUSY;
 	if (lo->lo_state != Lo_unbound)
 		goto out_putf;
 
-	error = loop_validate_file(file, bdev);
-	if (error)
-		goto out_putf;
-
-	mapping = file->f_mapping;
-	inode = mapping->host;
-
-	if (!(file->f_mode & FMODE_WRITE) || !(mode & FMODE_WRITE) ||
-	    !file->f_op->write_iter)
-		lo_flags |= LO_FLAGS_READ_ONLY;
-
 	error = -EFBIG;
-	size = get_loop_size(lo, file);
+	size = (lo->lo_lsmt_ro_file->m_vsize)>>9; 
+	
 	if ((loff_t)(sector_t)size != size)
 		goto out_putf;
 	error = loop_prepare_queue(lo);
@@ -1069,7 +1050,8 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	lo->use_dio = false;
 	lo->lo_device = bdev;
 	lo->lo_flags = lo_flags;
-	lo->lo_backing_file = file;
+	//leaving backing file blank here to ensure every trial to access will fail
+	//lo->lo_backing_file = file;
 	lo->transfer = NULL;
 	lo->ioctl = NULL;
 	lo->lo_sizelimit = 0;
@@ -1086,8 +1068,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	/* let user-space know about the new size */
 	kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
 
-	set_blocksize(bdev, S_ISBLK(inode->i_mode) ?
-		      block_size(inode->i_bdev) : PAGE_SIZE);
+	set_blocksize(bdev,PAGE_SIZE);
 
 	lo->lo_state = Lo_bound;
 	if (part_shift)
@@ -1102,7 +1083,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	return 0;
 
  out_putf:
-	fput(file);
+	//fput(file);
  out:
 	/* This is safe: open() is still holding a reference. */
 	module_put(THIS_MODULE);
