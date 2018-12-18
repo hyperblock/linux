@@ -48,6 +48,7 @@ struct loop_device {
 				 unsigned long arg); 
 
 	struct file *	lo_backing_file;
+	struct file *   lo_backing_files;
 	struct lsmt_ro_file* lo_lsmt_ro_file;
 	struct block_device *lo_device;
 	void		*key_data; 

@@ -55,6 +55,7 @@ struct loop_info {
 	unsigned char	   lo_encrypt_key[LO_KEY_SIZE]; /* ioctl w/o */
 	unsigned long	   lo_init[2];
 	char		   reserved[4];
+	//struct loop_mfile  mfile;I			/* for hyperblock, but now only loop_info64 version is required */
 };
 
 struct loop_info64 {
@@ -68,12 +69,12 @@ struct loop_info64 {
 	__u32		   lo_encrypt_key_size;		/* ioctl w/o */
 	__u32		   lo_flags;			/* ioctl r/o */
 	__u8		   lo_file_name[LO_NAME_SIZE];
-	struct loop_mfile  mfile;
 	//__u8		   **lo_file_names;		/* for hyperblock, backing file names */
 	//__u8		   mfcnt;			/* for hyperblock, backing file number */
 	__u8		   lo_crypt_name[LO_NAME_SIZE];
 	__u8		   lo_encrypt_key[LO_KEY_SIZE]; /* ioctl w/o */
 	__u64		   lo_init[2];
+	struct loop_mfile  mfile;
 };
 
 /*

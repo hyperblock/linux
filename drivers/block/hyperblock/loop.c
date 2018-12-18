@@ -1042,7 +1042,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 			goto out;
 	}	
 
-
+	
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
 
@@ -1071,6 +1071,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	lo->lo_flags = lo_flags;
 	//leaving backing file blank here to ensure every trial to access will fail
 	//lo->lo_backing_file = file;
+	lo->backing_files = files;//for operating in loop_clr_fd_mfile
 	lo->transfer = NULL;
 	lo->ioctl = NULL;
 	lo->lo_sizelimit = 0;
@@ -1248,9 +1249,11 @@ static int loop_clr_fd(struct loop_device *lo)
 
 static int loop_clr_fd_mfile(struct loop_device *lo)
 {
-	struct file *filp = lo->lo_backing_file;
+	struct file *filps = lo->lo_backing_files;
 	gfp_t gfp = lo->old_gfp_mask;
 	struct block_device *bdev = lo->lo_device;
+	size_t i,n;
+	n = lo->lo_lsmt_ro_file->m_files_count;
 
 	if (lo->lo_state != Lo_bound)
 		return -ENXIO;
@@ -1271,7 +1274,7 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 		return 0;
 	}
 
-	if (filp == NULL)
+	if (filps == NULL)
 		return -EINVAL;
 
 	/* freeze request queue during the transition */
@@ -1308,7 +1311,7 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 		/* let user-space know about this change */
 		kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
 	}
-	mapping_set_gfp_mask(filp->f_mapping, gfp);
+	//mapping_set_gfp_mask(filp->f_mapping, gfp);
 	lo->lo_state = Lo_unbound;
 	/* This is safe: open() is still holding a reference. */
 	module_put(THIS_MODULE);
@@ -1327,7 +1330,12 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 	 * lock dependency possibility warning as fput can take
 	 * bd_mutex which is usually taken before lo_ctl_mutex.
 	 */
-	fput(filp);
+	//fput(filp);
+	for(i=0;i<n;i++)
+	{
+		fput(filps[i]);
+	}
+	kvfree(filps);
 	return 0;
 }
 
