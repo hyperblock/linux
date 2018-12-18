@@ -1019,13 +1019,29 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	int		lo_flags = 0;
 	int		error;
 	loff_t		size;
-
 	struct lsmt_ro_file	*lsmtfile;
+	size_t 		i,j;
+	struct file	*file;
+	struct address_space 	*mapping;
+	struct 		file	*files;	
+	size_t		n;
 
 	lsmtfile = loop_init_lsmtfile(lo, arg);
 	error = -EBADF;
 	if(lsmtfile==NULL) goto out;
 	lo->lo_lsmt_ro_file = lsmtfile;
+	
+	//get all files, note that file is used only once here 
+	error = -EBADF;
+	n = lsmtfile->m_files_count;
+	files = kvmalloc(sizeof(struct file) * n);
+	for(i=0; i<n; i++)
+	{
+		files[i] = fget(lsmtfile->mfiles[i]);	
+		if(!files[i])
+			goto out;
+	}	
+
 
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
@@ -1033,6 +1049,9 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	error = -EBUSY;
 	if (lo->lo_state != Lo_unbound)
 		goto out_putf;
+
+	//use first file's gfp mask for loop
+	mappping = files[0]->f_mapping;
 
 	error = -EFBIG;
 	size = (lo->lo_lsmt_ro_file->m_vsize)>>9; 
@@ -1056,7 +1075,8 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	lo->ioctl = NULL;
 	lo->lo_sizelimit = 0;
 	lo->old_gfp_mask = mapping_gfp_mask(mapping);
-	mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
+	// we do not disable io and vfs ops
+	//mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
 
 	if (!(lo_flags & LO_FLAGS_READ_ONLY) && file->f_op->fsync)
 		blk_queue_write_cache(lo->lo_queue, true, false);
@@ -1082,9 +1102,23 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	bdgrab(bdev);
 	return 0;
 
- out_putf:
+ out_putf:	
+	// do fput to all files
 	//fput(file);
+	for(i=0;i<n;i++){
+		fput(files[i]);
+	}	
+	kvfree(files)
+	module_put(THIS_MODULE);
+	return error;
  out:
+	if(i!=0) {
+		for(j=0;j<i;j++){
+			fput(files[j]);
+		}
+	}
+
+	kvfree(files);
 	/* This is safe: open() is still holding a reference. */
 	module_put(THIS_MODULE);
 	return error;
