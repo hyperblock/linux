@@ -990,14 +990,14 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)
 {
 	const int IMAGE_RO_LAYERS = arg->mfcnt;
-	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS);
+	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
 	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
 	
 	if(copy_from_user(mfds, arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
 	
 	struct lsmt_ro_file *ro = NULL;
-	ro = open_files(mfds->fds, IMAGE_RO_LAYERS, true);
+	ro = open_files((void **)mfds->fds, IMAGE_RO_LAYERS, true);
 	PRINT_INFO("create lsmt_ro_file object. addr: 0x%lx", (unsigned long)(void *)ro);	
         
         if (ro == NULL) {
@@ -1020,11 +1020,11 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	int		error;
 	loff_t		size;
 	struct lsmt_ro_file	*lsmtfile;
-	size_t 		i,j;
-	struct file	*file;
+	size_t 		i,j = 0;
+	//struct file	*file;
 	struct address_space 	*mapping;
-	struct 		file	*files;	
-	size_t		n;
+	struct 		file	**files = NULL;	
+	size_t		n = 0;
 
 	lsmtfile = loop_init_lsmtfile(lo, arg);
 	error = -EBADF;
@@ -1034,10 +1034,10 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	//get all files, note that file is used only once here 
 	error = -EBADF;
 	n = lsmtfile->m_files_count;
-	files = kvmalloc(sizeof(struct file) * n);
+	files = kvmalloc(sizeof(struct file *) * n, GFP_KERNEL);
 	for(i=0; i<n; i++)
 	{
-		files[i] = fget(lsmtfile->mfiles[i]);	
+		files[i] = fget(lsmtfile->m_files[i]);	
 		if(!files[i])
 			goto out;
 	}	
@@ -1051,7 +1051,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 		goto out_putf;
 
 	//use first file's gfp mask for loop
-	mappping = files[0]->f_mapping;
+	mapping = files[0]->f_mapping;
 
 	error = -EFBIG;
 	size = (lo->lo_lsmt_ro_file->m_vsize)>>9; 
@@ -1071,7 +1071,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	lo->lo_flags = lo_flags;
 	//leaving backing file blank here to ensure every trial to access will fail
 	//lo->lo_backing_file = file;
-	lo->backing_files = files;//for operating in loop_clr_fd_mfile
+	lo->lo_backing_files = files;//for operating in loop_clr_fd_mfile
 	lo->transfer = NULL;
 	lo->ioctl = NULL;
 	lo->lo_sizelimit = 0;
@@ -1079,7 +1079,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	// we do not disable io and vfs ops
 	//mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
 
-	if (!(lo_flags & LO_FLAGS_READ_ONLY) && file->f_op->fsync)
+	if (!(lo_flags & LO_FLAGS_READ_ONLY) && files[0]->f_op->fsync)
 		blk_queue_write_cache(lo->lo_queue, true, false);
 
 	loop_update_dio(lo);
@@ -1109,7 +1109,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	for(i=0;i<n;i++){
 		fput(files[i]);
 	}	
-	kvfree(files)
+	kvfree(files);
 	module_put(THIS_MODULE);
 	return error;
  out:
@@ -1249,7 +1249,7 @@ static int loop_clr_fd(struct loop_device *lo)
 
 static int loop_clr_fd_mfile(struct loop_device *lo)
 {
-	struct file *filps = lo->lo_backing_files;
+	struct file **filps = lo->lo_backing_files;
 	gfp_t gfp = lo->old_gfp_mask;
 	struct block_device *bdev = lo->lo_device;
 	size_t i,n;

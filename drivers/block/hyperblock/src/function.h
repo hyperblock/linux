@@ -19,7 +19,7 @@
 #include <linux/file.h>
 #include <linux/mm.h>
 #include <linux/uaccess.h>
-
+#include <linux/version.h>
 #endif
 
 size_t _lsmt_get_file_size(void *fd)
@@ -51,12 +51,16 @@ ssize_t _lsmt_pread(void *fd, void *buf, size_t n, off_t offset)
 #ifndef __KERNEL__
         return pread((int)(uint64_t)fd, buf, n, offset);
 #else
-	mm_segment_t oldfs;
-	int ret;
-	oldfs = get_fs();
-	set_fs(get_ds());
-	ret = vfs_read((struct file *)fd,buf,n,(loff_t *)&offset);
-	set_fs(oldfs);
+	#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,14,14)
+		mm_segment_t oldfs;
+		int ret;
+		oldfs = get_fs();
+		set_fs(get_ds());
+		ret = vfs_read((struct file *)fd,buf,n,(loff_t *)&offset);
+		set_fs(oldfs);
+	#else	
+		int ret = kernel_read((struct file *)fd,buf,n,(loff_t *)&offset);
+	#endif
 	return ret;
 #endif
 }
