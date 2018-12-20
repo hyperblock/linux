@@ -38,6 +38,7 @@ struct loop_device {
 				    struct page *loop_page, unsigned loop_off,
 				    int size, sector_t real_block);
 	char		lo_file_name[LO_NAME_SIZE];
+	struct 		loop_mfile 	mfile;//filenames
 	char		lo_crypt_name[LO_NAME_SIZE];
 	char		lo_encrypt_key[LO_KEY_SIZE];
 	int		lo_encrypt_key_size;
@@ -47,9 +48,9 @@ struct loop_device {
 	int		(*ioctl)(struct loop_device *, int cmd, 
 				 unsigned long arg); 
 
-	struct file *	lo_backing_file;
-	struct file **   lo_backing_files;
-	struct lsmt_ro_file* lo_lsmt_ro_file;
+	struct file		*lo_backing_file;
+	struct file		**lo_backing_files;
+	struct lsmt_ro_file	*lo_lsmt_ro_file;
 	struct block_device *lo_device;
 	void		*key_data; 
 

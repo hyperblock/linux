@@ -1011,6 +1011,37 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
 	return ro;
 }
 
+static void loop_alloc_mfile(struct loop_mfile *mf, size_t fcnt)
+{
+	size_t i;
+	mf->filenames = kvmalloc(fcnt * sizeof(char *),GFP_KERNEL);
+	mf->mfcnt = fcnt;
+	for(i=0;i<fcnt;i++){
+		mf->filenames[i] = kvmalloc(LO_NAME_SIZE * sizeof(char),GFP_KERNEL);
+	}
+}
+
+static void loop_free_mfile(struct loop_mfile *mf, size_t fcnt)
+{
+	size_t i;
+	for(i=0;i<fcnt;i++){
+		kvfree(mf->filenames[i]);
+	}
+	kvfree(mf->filenames);
+}
+
+static void loop_copy_mfile(struct loop_mfile *src, struct loop_mfile *dst)
+{
+	BUG_ON(src->filenames==NULL);	
+	BUG_ON(dst->filenames==NULL);	
+	size_t n = src->mfcnt;
+	size_t i;
+	dst->mfcnt = src->mfcnt;
+	for(i=0;i<n;i++){
+		memcpy(src->filenames[i],dst->filenames[i],LO_NAME_SIZE);
+	}
+} 
+
 
 static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 		       struct block_device *bdev, 
@@ -1042,7 +1073,9 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 			goto out;
 	}	
 
-	
+	loop_alloc_mfile(&lo->mfile,n);
+
+
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
 
@@ -1339,8 +1372,6 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 	return 0;
 }
 
-
-
 static int
 loop_set_status(struct loop_device *lo, const struct loop_info64 *info)
 {
@@ -1433,6 +1464,100 @@ loop_set_status(struct loop_device *lo, const struct loop_info64 *info)
 }
 
 static int
+loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
+{
+	int err;
+	struct loop_func_table *xfer;
+	kuid_t uid = current_uid();
+
+	if (lo->lo_encrypt_key_size &&
+	    !uid_eq(lo->lo_key_owner, uid) &&
+	    !capable(CAP_SYS_ADMIN))
+		return -EPERM;
+	if (lo->lo_state != Lo_bound)
+		return -ENXIO;
+	if ((unsigned int) info->lo_encrypt_key_size > LO_KEY_SIZE)
+		return -EINVAL;
+
+	/* I/O need to be drained during transfer transition */
+	blk_mq_freeze_queue(lo->lo_queue);
+
+	err = loop_release_xfer(lo);
+	if (err)
+		goto exit;
+
+	if (info->lo_encrypt_type) {
+		unsigned int type = info->lo_encrypt_type;
+
+		if (type >= MAX_LO_CRYPT) {
+			err = -EINVAL;
+			goto exit;
+		}
+		xfer = xfer_funcs[type];
+		if (xfer == NULL) {
+			err = -EINVAL;
+			goto exit;
+		}
+	} else
+		xfer = NULL;
+
+	err = loop_init_xfer(lo, xfer, info);
+	if (err)
+		goto exit;
+
+	if (lo->lo_offset != info->lo_offset ||
+	    lo->lo_sizelimit != info->lo_sizelimit) {
+		if (figure_loop_size(lo, info->lo_offset, info->lo_sizelimit)) {
+			err = -EFBIG;
+			goto exit;
+		}
+	}
+
+	loop_config_discard(lo);
+
+	loop_copy_mfile(&info->mfile,&lo->mfile);
+	loop_free_mfile(&info->mfile,&lo->mfile.mfcnt);
+	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
+	memcpy(lo->lo_crypt_name, info->lo_crypt_name, LO_NAME_SIZE);
+	lo->lo_file_name[LO_NAME_SIZE-1] = 0;
+	lo->lo_crypt_name[LO_NAME_SIZE-1] = 0;
+
+	if (!xfer)
+		xfer = &none_funcs;
+	lo->transfer = xfer->transfer;
+	lo->ioctl = xfer->ioctl;
+
+	if ((lo->lo_flags & LO_FLAGS_AUTOCLEAR) !=
+	     (info->lo_flags & LO_FLAGS_AUTOCLEAR))
+		lo->lo_flags ^= LO_FLAGS_AUTOCLEAR;
+
+	lo->lo_encrypt_key_size = info->lo_encrypt_key_size;
+	lo->lo_init[0] = info->lo_init[0];
+	lo->lo_init[1] = info->lo_init[1];
+	if (info->lo_encrypt_key_size) {
+		memcpy(lo->lo_encrypt_key, info->lo_encrypt_key,
+		       info->lo_encrypt_key_size);
+		lo->lo_key_owner = uid;
+	}
+
+	/* update dio if lo_offset or transfer is changed */
+	//__loop_update_dio(lo, lo->use_dio);
+	// no need dio in hyperblock
+
+ exit:
+	blk_mq_unfreeze_queue(lo->lo_queue);
+
+	if (!err && (info->lo_flags & LO_FLAGS_PARTSCAN) &&
+	     !(lo->lo_flags & LO_FLAGS_PARTSCAN)) {
+		lo->lo_flags |= LO_FLAGS_PARTSCAN;
+		lo->lo_disk->flags &= ~GENHD_FL_NO_PART_SCAN;
+		loop_reread_partitions(lo, lo->lo_device);
+	}
+
+	return err;
+}
+
+static int
 loop_get_status(struct loop_device *lo, struct loop_info64 *info)
 {
 	struct file *file;
@@ -1472,6 +1597,49 @@ loop_get_status(struct loop_device *lo, struct loop_info64 *info)
 	fput(file);
 	return ret;
 }
+
+static int
+loop_get_status_mfile(struct loop_device *lo, struct loop_info64 *info)
+{
+	struct file *file;
+	struct kstat stat;
+	int ret;
+
+	if (lo->lo_state != Lo_bound) {
+		mutex_unlock(&lo->lo_ctl_mutex);
+		return -ENXIO;
+	}
+
+	memset(info, 0, sizeof(*info));
+	info->lo_number = lo->lo_number;
+	info->lo_offset = lo->lo_offset;
+	info->lo_sizelimit = lo->lo_sizelimit;
+	info->lo_flags = lo->lo_flags;
+	loop_copy_mfile(&lo->mfile,&info->mfile);
+	memcpy(info->lo_file_name, lo->lo_file_name, LO_NAME_SIZE);
+	memcpy(info->lo_crypt_name, lo->lo_crypt_name, LO_NAME_SIZE);
+	info->lo_encrypt_type =
+		lo->lo_encryption ? lo->lo_encryption->number : 0;
+	if (lo->lo_encrypt_key_size && capable(CAP_SYS_ADMIN)) {
+		info->lo_encrypt_key_size = lo->lo_encrypt_key_size;
+		memcpy(info->lo_encrypt_key, lo->lo_encrypt_key,
+		       lo->lo_encrypt_key_size);
+	}
+
+	/* Drop lo_ctl_mutex while we call into the filesystem. */
+	file = get_file(lo->lo_backing_files[0]);
+	mutex_unlock(&lo->lo_ctl_mutex);
+	ret = vfs_getattr(&file->f_path, &stat, STATX_INO,
+			  AT_STATX_SYNC_AS_STAT);
+	if (!ret) {
+		info->lo_device = huge_encode_dev(stat.dev);
+		info->lo_inode = stat.ino;
+		info->lo_rdevice = huge_encode_dev(stat.rdev);
+	}
+	fput(file);
+	return ret;
+}
+
 
 static void
 loop_info64_from_old(const struct loop_info *info, struct loop_info64 *info64)
@@ -1551,10 +1719,18 @@ static int
 loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user *arg)
 {
 	struct loop_info64 info64;
+	size_t i=0;
+	size_t n = info64.mfile.mfcnt;
 
 	if (copy_from_user(&info64, arg, sizeof (struct loop_info64)))
 		return -EFAULT;
-	return loop_set_status(lo, &info64);
+	loop_alloc_mfile(&info64.mfile,n);
+	for(i=0;i<n;i++){
+		if(copy_from_user(info64.mfile.filenames[i],arg->mfile.filenames[i],LO_NAME_SIZE))
+			return -EFAULT;
+	}	
+
+	return loop_set_status_mfile(lo, &info64);
 }
 
 static int
@@ -1591,6 +1767,31 @@ loop_get_status64(struct loop_device *lo, struct loop_info64 __user *arg) {
 
 	return err;
 }
+
+static int
+loop_get_status64_mfile(struct loop_device *lo, struct loop_info64 __user *arg) {
+	struct loop_info64 info64;
+	loop_alloc_mfile(&info64.mfile,lo->mfile.mfcnt);
+	int err;
+	size_t i=0;
+	size_t n = info64.mfile.mfcnt;
+	if (!arg) {
+		mutex_unlock(&lo->lo_ctl_mutex);
+		return -EINVAL;
+	}
+
+	err = loop_get_status_mfile(lo, &info64);
+	if (!err && copy_to_user(arg, &info64, sizeof(info64)))
+		err = -EFAULT;
+
+	for(i=0;i<n;i++){
+		if(copy_to_user(arg->mfile.filenames[i], info64.mfile.filenames[i], LO_NAME_SIZE))
+			return -EFAULT;
+	}	
+	loop_free_mfile(&info64.mfile,n);
+	return err;
+}
+
 
 static int loop_set_capacity(struct loop_device *lo)
 {
@@ -1685,9 +1886,12 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 			err = loop_set_status64_mfile(lo,
 					(struct loop_info64 __user *) arg);
 		break;
-
 	case LOOP_GET_STATUS64:
 		err = loop_get_status64(lo, (struct loop_info64 __user *) arg);
+		/* loop_get_status() unlocks lo_ctl_mutex */
+		goto out_unlocked;
+	case LOOP_GET_STATUS64_MFILE:
+		err = loop_get_status64_mfile(lo, (struct loop_info64 __user *) arg);
 		/* loop_get_status() unlocks lo_ctl_mutex */
 		goto out_unlocked;
 	case LOOP_SET_CAPACITY:
