@@ -12,7 +12,8 @@
 
 #else
 
-//#include <linux/kernel.h>
+#define pr_fmt(fmt) KBUILD_MODNAME " :%s:%d:" fmt, __func__, __LINE__ 
+#include <linux/printk.h>
 #include <linux/types.h>
 #include <linux/string.h>
 #include <linux/stat.h>
@@ -354,7 +355,9 @@ static struct segment_mapping* do_load_index(void* fd,
         struct segment_mapping *ibuf = NULL;
         struct segment_mapping *ret_index = NULL;
         uint64_t index_bytes;
+	pr_info("here ma i \n");
         int ret = _lsmt_pread(fd, buf, HT_SPACE, 0);
+	pr_info("here ma i \n");
 	
         if (ret < (ssize_t)HT_SPACE){
                 PRINT_ERROR("failed to read file header (fildes: %d).", *(int *)fd);
@@ -370,7 +373,9 @@ static struct segment_mapping* do_load_index(void* fd,
                         PRINT_ERROR("uncognized file type (fildes: %d).", *(int *)fd);
                        goto error_ret;
                 }
+	pr_info("here ma i \n");
                 ret = _lsmt_pread(fd, buf, HT_SPACE, trailer_offset);
+	pr_info("here ma i \n");
                 if (ret < (ssize_t)HT_SPACE){
                         PRINT_ERROR("failed to read file trailer "\
                                 "(fildes: %d).", (int)(uint64_t)fd);
@@ -410,7 +415,9 @@ static struct segment_mapping* do_load_index(void* fd,
 #else
 	ibuf =  (struct segment_mapping *)kvmalloc(pht->index_size * sizeof(*ibuf), GFP_KERNEL);
 #endif
+	pr_info("here ma i \n");
         ret = _lsmt_pread(fd, ibuf, index_bytes, pht->index_offset);
+	pr_info("here ma i \n");
         //从file的 HeaderTrailer::SPACE 偏移开始读入index
         if (ret < (ssize_t)index_bytes) {
                 _lsmt_free(ibuf);
@@ -542,8 +549,8 @@ static int merge_indexes(int level,
                          uint64_t end)
 {
         if (level >= n) return 0;
-        // PRINT_INFO("level %d range [ %llu, %llu ] %lu", level, start, end,
-        //          ro_index_size(indexes[level]));
+        PRINT_INFO("level %d range [ %llu, %llu ] %lu", level, start, end,
+                  ro_index_size(indexes[level]));
         struct segment_mapping *p = (struct segment_mapping *)
                                         ro_index_lower_bound(indexes[level],
                                                 start);
@@ -652,7 +659,9 @@ static struct lsmt_ro_index *load_merge_index(void **files, size_t n, struct lsm
 	int i;
         for (i=0; i < n; ++i) {
                 ssize_t size = 0;
+	pr_info("here ma i \n");
                 struct segment_mapping *p = do_load_index(files[i], ht, true, &size);
+	pr_info("here ma i \n");
                 if (!p) {
                         PRINT_ERROR("failed to load index from %d-th file", i);
 #ifndef __KERNEL__
@@ -660,10 +669,12 @@ static struct lsmt_ro_index *load_merge_index(void **files, size_t n, struct lsm
 #endif
                         return NULL;
                 }
+	pr_info("here ma i \n");
                 struct lsmt_ro_index *pi = create_memory_index(p, ht->index_size,
                                                 HT_SPACE / ALIGNMENT, 
                                                 ht->index_offset / ALIGNMENT, 
                                                 false);
+	pr_info("here ma i \n");
                 if (!pi) {
                         PRINT_ERROR("failed to create memory index! " \
                                 "( %d-th file )", i);
@@ -676,7 +687,9 @@ static struct lsmt_ro_index *load_merge_index(void **files, size_t n, struct lsm
         REVERSE_LIST(int, (int *)&files[0], (int *)&files[n-1]);      
         REVERSE_LIST(struct lsmt_ro_index*, &indexes[0], &indexes[n-1]);
         
+	pr_info("here ma i \n");
         pmi = merge_memory_indexes(&indexes[0], n);
+	pr_info("here ma i \n");
         
         if (!pmi){
                 PRINT_ERROR("failed to merge indexes %s","");
@@ -770,19 +783,25 @@ size_t lsmt_pread(struct lsmt_ro_file *file,
 
 struct lsmt_ro_file *open_files(void **files, size_t n, bool ownership)
 {
+
+	pr_info("here ma i \n");
         struct lsmt_ro_file *ret = (struct lsmt_ro_file *)_lsmt_malloc(sizeof(files[0]) * n
                                         + sizeof(struct lsmt_ro_file));
+	pr_info("here ma i \n");
 
         struct lsmt_ht ht;
         struct lsmt_ro_index *idx = load_merge_index(files, n, &ht);
         if (idx == NULL){
                 return NULL;
         }
+	pr_info("here ma i \n");
         ret->m_files_count = n;
         ret->m_index = idx;
         ret->m_ownership = ownership;
         ret->m_vsize = ht.virtual_size;
         ret->MAX_IO_SIZE = MAX_IO_SIZE;
+	pr_info("here ma i \n");
         memcpy(ret->m_files, &files[0], n * sizeof(files[0]));
+	pr_info("here ma i \n");
         return ret;
 }

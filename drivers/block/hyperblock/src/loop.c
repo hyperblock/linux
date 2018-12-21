@@ -48,7 +48,8 @@
  * - Should use an own CAP_* category instead of CAP_SYS_ADMIN
  *
  */
-
+#define pr_fmt(fmt) KBUILD_MODNAME " :%s:%d:" fmt, __func__, __LINE__ 
+#include <linux/printk.h>
 #include <linux/module.h>
 #include <linux/moduleparam.h>
 #include <linux/sched.h>
@@ -77,6 +78,7 @@
 #include <linux/falloc.h>
 #include <linux/uio.h>
 #include "loop.h"
+#include "util.h"
 #include <linux/uaccess.h>
 
 static DEFINE_IDR(loop_index_idr);
@@ -989,16 +991,38 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 // 
 static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)
 {
-	const int IMAGE_RO_LAYERS = arg->mfcnt;
-	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
+
+	size_t i;
 	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
+	struct loop_mfile_fds kfds;
+	if(copy_from_user(&kfds, arg, sizeof(struct loop_mfile_fds))) return NULL;
+	const int IMAGE_RO_LAYERS = kfds.mfcnt;
+	pr_info("Now we have IMAGE_RO_LAYERS \n");
+
+	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
+	pr_info("here ma i \n");
 	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
+	pr_info("here ma i \n");
 	
 	if(copy_from_user(mfds, arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
+	pr_info("here ma i \n");
 	
 	struct lsmt_ro_file *ro = NULL;
-	ro = open_files((void **)mfds->fds, IMAGE_RO_LAYERS, true);
+	pr_info("here ma i \n");
+
+
+	struct file **files = kvmalloc(sizeof(struct file *) * IMAGE_RO_LAYERS, GFP_KERNEL);
+	for(i=0;i<IMAGE_RO_LAYERS;i++){
+		files[i] = fget(mfds->fds[i]);
+		if(!files[i]){
+			pr_info("Fail to convert from fd to struct \n");
+			return NULL;
+		}
+	}
+	ro = open_files((void **)files, IMAGE_RO_LAYERS, true);
+	pr_info("here ma i \n");
 	PRINT_INFO("create lsmt_ro_file object. addr: 0x%lx", (unsigned long)(void *)ro);	
+	pr_info("here ma i \n");
         
         if (ro == NULL) {
                 PRINT_INFO("create lsmt_ro_file object failed, func return.%c",0);
@@ -1008,6 +1032,7 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
  
 	set_max_io_size(ro,  512  * 1024);
 	PRINT_INFO("file->MAX_IO_SIZE: %llu", ro->MAX_IO_SIZE);
+	kvfree(files);
 	return ro;
 }
 
@@ -1057,7 +1082,10 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	struct 		file	**files = NULL;	
 	size_t		n = 0;
 
+
+	PRINT_INFO("kern\n");
 	lsmtfile = loop_init_lsmtfile(lo, arg);
+	PRINT_INFO("kern\n");
 	error = -EBADF;
 	if(lsmtfile==NULL) goto out;
 	lo->lo_lsmt_ro_file = lsmtfile;
@@ -1073,8 +1101,10 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 			goto out;
 	}	
 
+	PRINT_INFO("kern\n");
 	loop_alloc_mfile(&lo->mfile,n);
 
+	PRINT_INFO("kern\n");
 
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
@@ -1099,6 +1129,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_device_ro(bdev, (lo_flags & LO_FLAGS_READ_ONLY) != 0);
 
+	PRINT_INFO("HERE");
 	lo->use_dio = false;
 	lo->lo_device = bdev;
 	lo->lo_flags = lo_flags;
@@ -1115,6 +1146,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	if (!(lo_flags & LO_FLAGS_READ_ONLY) && files[0]->f_op->fsync)
 		blk_queue_write_cache(lo->lo_queue, true, false);
 
+	PRINT_INFO("HERE");
 	loop_update_dio(lo);
 	set_capacity(lo->lo_disk, size);
 	bd_set_size(bdev, size << 9);
@@ -1124,6 +1156,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_blocksize(bdev,PAGE_SIZE);
 
+	PRINT_INFO("HERE");
 	lo->lo_state = Lo_bound;
 	if (part_shift)
 		lo->lo_flags |= LO_FLAGS_PARTSCAN;
@@ -1850,7 +1883,9 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		err = loop_set_fd(lo, mode, bdev, arg);
 		break;
 	case LOOP_SET_FD_MFILE:
-		err = loop_set_fd_mfile(lo,mode,bdev,(struct loop_mfile_fds __user *)arg);
+		pr_info("here am i \n");
+		err = loop_set_fd_mfile(lo, mode, bdev, (struct loop_mfile_fds __user *)arg);
+		break;
 	case LOOP_CHANGE_FD:
 		err = loop_change_fd(lo, bdev, arg);
 		break;
@@ -1864,6 +1899,7 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		err = loop_clr_fd_mfile(lo);
 		if (!err)
 			goto out_unlocked;
+		break;
 	case LOOP_SET_STATUS:
 		err = -EPERM;
 		if ((mode & FMODE_WRITE) || capable(CAP_SYS_ADMIN))
