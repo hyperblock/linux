@@ -78,7 +78,7 @@
 #include <linux/falloc.h>
 #include <linux/uio.h>
 #include "loop.h"
-#include "util.h"
+#include "lsmt_ro_file.h"
 #include <linux/uaccess.h>
 
 static DEFINE_IDR(loop_index_idr);

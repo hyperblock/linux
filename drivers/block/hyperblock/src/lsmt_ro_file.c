@@ -417,7 +417,7 @@ static struct segment_mapping* do_load_index(void* fd,
 #endif
 	pr_info("here ma i \n");
         ret = _lsmt_pread(fd, ibuf, index_bytes, pht->index_offset);
-	pr_info("here ma i \n");
+	pr_info("here ma i ret is %d, index_bytes is %d \n,", ret,index_bytes);
         //从file的 HeaderTrailer::SPACE 偏移开始读入index
         if (ret < (ssize_t)index_bytes) {
                 _lsmt_free(ibuf);

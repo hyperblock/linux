@@ -31,11 +31,11 @@
 #include <linux/printk.h>
 
 #define PRINT_INFO(fmt, ...)                                     \
-	do { if ((HBDEBUG)) \
+	do { if ((1)) \
 	printk(KERN_INFO fmt, ## __VA_ARGS__);} while (0)
 
 #define PRINT_ERROR(fmt, ...)                                          \
-	do { if ((HBDEBUG)) \
+	do { if ((1)) \
 	printk(KERN_ERR fmt, ## __VA_ARGS__);} while (0)
 #define ASSERT(exp)						\
 	BUG_ON(exp)
