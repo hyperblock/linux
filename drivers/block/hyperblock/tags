@@ -1,0 +1,315 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+ALIGNED_MEM	src/lsmt_ro_file.h	45;"	d
+ALIGNMENT	src/lsmt_ro_file.c	41;"	d	file:
+ALIGNMENT4K	src/lsmt_ro_file.c	/^const static uint32_t ALIGNMENT4K    = 4 << 10;$/;"	v	file:
+ASSERT	src/lsmt_ro_file.h	25;"	d
+ASSERT	src/lsmt_ro_file.h	40;"	d
+ASSERT	src/util.h	17;"	d
+FLAG_SHIFT_HEADER	src/lsmt_ro_file.c	/^static const uint32_t FLAG_SHIFT_HEADER = 0; \/\/ 1:header     0:trailer$/;"	v	file:
+FLAG_SHIFT_SEALED	src/lsmt_ro_file.c	/^static const uint32_t FLAG_SHIFT_SEALED = 2; \/\/ 1:YES,       0:NO$/;"	v	file:
+FLAG_SHIFT_TYPE	src/lsmt_ro_file.c	/^static const uint32_t FLAG_SHIFT_TYPE = 1;   \/\/ 1:data file, 0:index file$/;"	v	file:
+HBDEBUG	src/lsmt_ro_file.h	7;"	d
+HBDEBUG	src/util.h	6;"	d
+HT_SPACE	src/lsmt_ro_file.c	/^static const uint32_t HT_SPACE = 4096;$/;"	v	file:
+INVALID_MAPPING	src/lsmt_ro_file.c	/^static struct segment_mapping INVALID_MAPPING = {$/;"	v	typeref:struct:segment_mapping	file:
+INVALID_OFFSET	src/lsmt_ro_file.c	/^const static uint64_t INVALID_OFFSET = (1UL << 50) - 1;$/;"	v	file:
+KERNEL_PATH	Makefile	/^KERNEL_PATH=\/root\/kernel\/hyperblock_loop$/;"	m
+LOOP_ATTR_RO	src/loop.c	752;"	d	file:
+LOOP_CTRL_MINOR	src/loop.c	/^MODULE_ALIAS_MISCDEV(LOOP_CTRL_MINOR);$/;"	v
+LOOP_IV_SECTOR_BITS	src/cryptoloop.c	36;"	d	file:
+LOOP_IV_SECTOR_SIZE	src/cryptoloop.c	37;"	d	file:
+LOOP_MAJOR	src/loop.c	/^MODULE_ALIAS_BLOCKDEV_MAJOR(LOOP_MAJOR);$/;"	v
+Lo_bound	src/loop.h	/^	Lo_bound,$/;"	e	enum:__anon1
+Lo_rundown	src/loop.h	/^	Lo_rundown,$/;"	e	enum:__anon1
+Lo_unbound	src/loop.h	/^	Lo_unbound,$/;"	e	enum:__anon1
+MAGIC0	src/lsmt_ro_file.c	/^static uint64_t *MAGIC0 = (uint64_t *)"LSMT\\0\\1\\2";$/;"	v	file:
+MAGIC1	src/lsmt_ro_file.c	/^static struct _UUID MAGIC1 = { 0xd2637e65, 0x4494, 0x4c08, 0xd2a2,$/;"	v	typeref:struct:_UUID	file:
+MAX_IO_SIZE	src/lsmt_ro_file.c	/^const static int MAX_IO_SIZE         = 4 * 1024 * 1024;$/;"	v	file:
+MAX_IO_SIZE	src/lsmt_ro_file.h	/^        size_t MAX_IO_SIZE;$/;"	m	struct:lsmt_ro_file
+MAX_LAYERS	src/lsmt_ro_file.c	/^const static int MAX_LAYERS          = 255;$/;"	v	file:
+MAX_LENGTH	src/lsmt_ro_file.c	/^const static uint32_t MAX_LENGTH     = (1 << 14) - 1;$/;"	v	file:
+MAX_OFFSET	src/lsmt_ro_file.c	/^const static uint64_t MAX_OFFSET     = (1UL << 50) - 1;$/;"	v	file:
+PRINT_ERROR	src/lsmt_ro_file.h	21;"	d
+PRINT_ERROR	src/lsmt_ro_file.h	37;"	d
+PRINT_ERROR	src/util.h	14;"	d
+PRINT_INFO	src/lsmt_ro_file.h	17;"	d
+PRINT_INFO	src/lsmt_ro_file.h	33;"	d
+PRINT_INFO	src/util.h	7;"	d
+REVERSE_LIST	src/lsmt_ro_file.h	50;"	d
+TYPE_FILDES	src/lsmt_ro_file.h	55;"	d
+TYPE_LSMT_RO_INDEX	src/lsmt_ro_file.h	56;"	d
+TYPE_SEGMENT	src/lsmt_ro_file.h	53;"	d
+TYPE_SEGMENT_MAPPING	src/lsmt_ro_file.h	54;"	d
+UINT64_MAX	src/lsmt_ro_file.c	28;"	d	file:
+UTIL_H	src/util.h	2;"	d
+_LINUX_LOOP_H	src/loop.h	10;"	d
+_UUID	src/lsmt_ro_file.c	/^struct _UUID {$/;"	s	file:
+__LSMT_RO_H__	src/lsmt_ro_file.h	2;"	d
+__cached_gcc_-print-file-name_include	.cache.mk	/^__cached_gcc_-print-file-name_include := \/usr\/lib\/gcc\/x86_64-linux-gnu\/5\/include$/;"	m
+__lo_release	src/loop.c	/^static void __lo_release(struct loop_device *lo)$/;"	f	file:
+__loop_update_dio	src/loop.c	/^static void __loop_update_dio(struct loop_device *lo, bool dio)$/;"	f	file:
+__this_module	loop.mod.c	/^__visible struct module __this_module$/;"	v	typeref:struct:module
+__this_module	src/cryptoloop.mod.c	/^__visible struct module __this_module$/;"	v	typeref:struct:module
+__this_module	src/loop.mod.c	/^__visible struct module __this_module$/;"	v	typeref:struct:module
+__this_module	src/lsmt_ro_file.mod.c	/^__visible struct module __this_module$/;"	v	typeref:struct:module
+__used	loop.mod.c	/^__used$/;"	v	file:
+__used	src/cryptoloop.mod.c	/^__used$/;"	v	file:
+__used	src/loop.mod.c	/^__used$/;"	v	file:
+__used	src/lsmt_ro_file.mod.c	/^__used$/;"	v	file:
+_lsmt_free	src/function.h	/^void _lsmt_free(void *ptr)$/;"	f
+_lsmt_fstat	src/function.h	/^int _lsmt_fstat(void *fd, void *stat)$/;"	f
+_lsmt_get_file_size	src/function.h	/^size_t _lsmt_get_file_size(void *fd)$/;"	f
+_lsmt_malloc	src/function.h	/^void *_lsmt_malloc(size_t size)$/;"	f
+_lsmt_pread	src/function.h	/^ssize_t _lsmt_pread(void *fd, void *buf, size_t n, off_t offset)$/;"	f
+_lsmt_realloc	src/function.h	/^void *_lsmt_realloc(void *ptr, size_t size)$/;"	f
+a	src/lsmt_ro_file.c	/^        uint32_t a;$/;"	m	struct:_UUID	file:
+autoclear	src/loop.c	/^LOOP_ATTR_RO(autoclear);$/;"	v
+b	src/lsmt_ro_file.c	/^        uint16_t b, c, d;$/;"	m	struct:_UUID	file:
+backing_file	src/loop.c	/^LOOP_ATTR_RO(backing_file);$/;"	v
+backward_end_to	src/lsmt_ro_file.c	/^void backward_end_to(void *m, uint64_t x)$/;"	f
+bvec	src/loop.h	/^	struct bio_vec *bvec;$/;"	m	struct:loop_cmd	typeref:struct:loop_cmd::bio_vec
+c	src/lsmt_ro_file.c	/^        uint16_t b, c, d;$/;"	m	struct:_UUID	file:
+cleanup_cryptoloop	src/cryptoloop.c	/^cleanup_cryptoloop(void)$/;"	f	file:
+cleanup_cryptoloop	src/cryptoloop.c	/^module_exit(cleanup_cryptoloop);$/;"	v
+close_file	src/lsmt_ro_file.c	/^int close_file(struct lsmt_ro_file **file){$/;"	f
+compat_loop_info	src/loop.c	/^struct compat_loop_info {$/;"	s	file:
+create_memory_index	src/lsmt_ro_file.c	/^struct lsmt_ro_index *create_memory_index($/;"	f
+cryptoloop_funcs	src/cryptoloop.c	/^static struct loop_func_table cryptoloop_funcs = {$/;"	v	typeref:struct:loop_func_table	file:
+cryptoloop_init	src/cryptoloop.c	/^cryptoloop_init(struct loop_device *lo, const struct loop_info64 *info)$/;"	f	file:
+cryptoloop_ioctl	src/cryptoloop.c	/^cryptoloop_ioctl(struct loop_device *lo, int cmd, unsigned long arg)$/;"	f	file:
+cryptoloop_release	src/cryptoloop.c	/^cryptoloop_release(struct loop_device *lo)$/;"	f	file:
+cryptoloop_transfer	src/cryptoloop.c	/^cryptoloop_transfer(struct loop_device *lo, int cmd,$/;"	f	file:
+css	src/loop.h	/^	struct cgroup_subsys_state *css;$/;"	m	struct:loop_cmd	typeref:struct:loop_cmd::cgroup_subsys_state
+d	src/lsmt_ro_file.c	/^        uint16_t b, c, d;$/;"	m	struct:_UUID	file:
+dio	src/loop.c	/^LOOP_ATTR_RO(dio);$/;"	v
+do_load_index	src/lsmt_ro_file.c	/^static struct segment_mapping* do_load_index(void* fd, $/;"	f	file:
+do_req_filebacked	src/loop.c	/^static int do_req_filebacked(struct loop_device *lo, struct request *rq)$/;"	f	file:
+e	src/lsmt_ro_file.c	/^        uint8_t e[6];$/;"	m	struct:_UUID	file:
+encdec_cbc_t	src/cryptoloop.c	/^typedef int (*encdec_cbc_t)(struct skcipher_request *req);$/;"	t	file:
+figure_loop_size	src/loop.c	/^figure_loop_size(struct loop_device *lo, loff_t offset, loff_t sizelimit)$/;"	f	file:
+find_free_cb	src/loop.c	/^static int find_free_cb(int id, void *ptr, void *data)$/;"	f	file:
+flags	src/lsmt_ro_file.c	/^        uint32_t flags; \/\/= 0;$/;"	m	struct:lsmt_ht	file:
+forward_offset_to	src/lsmt_ro_file.c	/^void forward_offset_to(void *m, uint64_t x, int8_t type)$/;"	f
+gcc-goto.sh_gcc_-Wall_-Wundef_-Wstrict-prototypes_-Wno-trigraphs_-fno-strict-aliasing_-fno-common_-fshort-wchar_-Werror-implicit-function-declaration_-Wno-format-security_-std_gnu89_-fno-PIE	.cache.mk	/^__cached_\/bin\/bash_.\/scripts\/gcc-goto.sh_gcc_-Wall_-Wundef_-Wstrict-prototypes_-Wno-trigraphs_-fno-strict-aliasing_-fno-common_-fshort-wchar_-Werror-implicit-function-declaration_-Wno-format-security_-std_gnu89_-fno-PIE := y$/;"	m
+gcc-version.sh_-p_gcc	.cache.mk	/^__cached_\/bin\/bash_.\/scripts\/gcc-version.sh_-p_gcc := 050400$/;"	m
+gcc-version.sh_gcc	.cache.mk	/^__cached_\/bin\/bash_.\/scripts\/gcc-version.sh_gcc := 0504$/;"	m
+get_flag_bit	src/lsmt_ro_file.c	/^static uint32_t get_flag_bit(const struct lsmt_ht *ht, uint32_t shift)$/;"	f	file:
+get_loop_size	src/loop.c	/^static loff_t get_loop_size(struct loop_device *lo, struct file *file)$/;"	f	file:
+get_max_io_size	src/lsmt_ro_file.c	/^size_t get_max_io_size(const struct lsmt_ro_file *file )$/;"	f
+get_size	src/loop.c	/^static loff_t get_size(loff_t offset, loff_t sizelimit, struct file *file)$/;"	f	file:
+index_offset	src/lsmt_ro_file.c	/^        uint64_t index_offset; \/\/ in bytes$/;"	m	struct:lsmt_ht	file:
+index_size	src/lsmt_ro_file.c	/^        uint64_t index_size;   \/\/ # of SegmentMappings$/;"	m	struct:lsmt_ht	file:
+init	src/loop.h	/^	int (*init)(struct loop_device *, const struct loop_info64 *); $/;"	m	struct:loop_func_table
+init_cryptoloop	src/cryptoloop.c	/^init_cryptoloop(void)$/;"	f	file:
+init_cryptoloop	src/cryptoloop.c	/^module_init(init_cryptoloop);$/;"	v
+iocb	src/loop.h	/^	struct kiocb iocb;$/;"	m	struct:loop_cmd	typeref:struct:loop_cmd::kiocb
+ioctl	src/loop.h	/^	int		(*ioctl)(struct loop_device *, int cmd, $/;"	m	struct:loop_device
+ioctl	src/loop.h	/^	int (*ioctl)(struct loop_device *, int cmd, unsigned long arg);$/;"	m	struct:loop_func_table
+is_data_file	src/lsmt_ro_file.c	/^static bool is_data_file(const struct lsmt_ht *ht)$/;"	f	file:
+is_header	src/lsmt_ro_file.c	/^static bool is_header(const struct lsmt_ht *ht)$/;"	f	file:
+is_index_file	src/lsmt_ro_file.c	/^static bool is_index_file(const struct lsmt_ht *ht)$/;"	f	file:
+is_loop_device	src/loop.c	/^static inline int is_loop_device(struct file *file)$/;"	f	file:
+is_sealed	src/lsmt_ro_file.c	/^static bool is_sealed(const struct lsmt_ht *ht)$/;"	f	file:
+is_trailer	src/lsmt_ro_file.c	/^static bool is_trailer(const struct lsmt_ht *ht)$/;"	f	file:
+key_data	src/loop.h	/^	void		*key_data; $/;"	m	struct:loop_device
+length	src/lsmt_ro_file.h	/^        uint32_t length : 14; \/\/ length (8MB if in sector)$/;"	m	struct:segment
+length	src/lsmt_ro_file.h	/^        uint32_t length : 14;$/;"	m	struct:segment_mapping
+lo_backing_file	src/loop.h	/^	struct file		*lo_backing_file;$/;"	m	struct:loop_device	typeref:struct:loop_device::file
+lo_backing_files	src/loop.h	/^	struct file		**lo_backing_files;$/;"	m	struct:loop_device	typeref:struct:loop_device::file
+lo_compat_ioctl	src/loop.c	/^static int lo_compat_ioctl(struct block_device *bdev, fmode_t mode,$/;"	f	file:
+lo_complete_rq	src/loop.c	/^static void lo_complete_rq(struct request *rq)$/;"	f	file:
+lo_crypt_name	src/loop.h	/^	char		lo_crypt_name[LO_NAME_SIZE];$/;"	m	struct:loop_device
+lo_ctl_mutex	src/loop.h	/^	struct mutex		lo_ctl_mutex;$/;"	m	struct:loop_device	typeref:struct:loop_device::mutex
+lo_device	src/loop.c	/^	compat_dev_t	lo_device;      \/* ioctl r\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_device	src/loop.h	/^	struct block_device *lo_device;$/;"	m	struct:loop_device	typeref:struct:loop_device::block_device
+lo_discard	src/loop.c	/^static int lo_discard(struct loop_device *lo, struct request *rq, loff_t pos)$/;"	f	file:
+lo_disk	src/loop.h	/^	struct gendisk		*lo_disk;$/;"	m	struct:loop_device	typeref:struct:loop_device::gendisk
+lo_do_transfer	src/loop.c	/^lo_do_transfer(struct loop_device *lo, int cmd,$/;"	f	file:
+lo_encrypt_key	src/loop.c	/^	unsigned char	lo_encrypt_key[LO_KEY_SIZE]; \/* ioctl w\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_encrypt_key	src/loop.h	/^	char		lo_encrypt_key[LO_KEY_SIZE];$/;"	m	struct:loop_device
+lo_encrypt_key_size	src/loop.c	/^	compat_int_t	lo_encrypt_key_size;    \/* ioctl w\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_encrypt_key_size	src/loop.h	/^	int		lo_encrypt_key_size;$/;"	m	struct:loop_device
+lo_encrypt_type	src/loop.c	/^	compat_int_t	lo_encrypt_type;$/;"	m	struct:compat_loop_info	file:
+lo_encryption	src/loop.h	/^	struct loop_func_table *lo_encryption;$/;"	m	struct:loop_device	typeref:struct:loop_device::loop_func_table
+lo_file_name	src/loop.h	/^	char		lo_file_name[LO_NAME_SIZE];$/;"	m	struct:loop_device
+lo_flags	src/loop.c	/^	compat_int_t	lo_flags;       \/* ioctl r\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_flags	src/loop.h	/^	int		lo_flags;$/;"	m	struct:loop_device
+lo_fops	src/loop.c	/^static const struct block_device_operations lo_fops = {$/;"	v	typeref:struct:block_device_operations	file:
+lo_init	src/loop.c	/^	compat_ulong_t	lo_init[2];$/;"	m	struct:compat_loop_info	file:
+lo_init	src/loop.h	/^	__u32           lo_init[2];$/;"	m	struct:loop_device
+lo_inode	src/loop.c	/^	compat_ulong_t	lo_inode;       \/* ioctl r\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_ioctl	src/loop.c	/^static int lo_ioctl(struct block_device *bdev, fmode_t mode,$/;"	f	file:
+lo_key_owner	src/loop.h	/^	kuid_t		lo_key_owner;	\/* Who set the key *\/$/;"	m	struct:loop_device
+lo_lock	src/loop.h	/^	spinlock_t		lo_lock;$/;"	m	struct:loop_device
+lo_lsmt_ro_file	src/loop.h	/^	struct lsmt_ro_file	*lo_lsmt_ro_file;$/;"	m	struct:loop_device	typeref:struct:loop_device::lsmt_ro_file
+lo_name	src/loop.c	/^	char		lo_name[LO_NAME_SIZE];$/;"	m	struct:compat_loop_info	file:
+lo_number	src/loop.c	/^	compat_int_t	lo_number;      \/* ioctl r\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_number	src/loop.h	/^	int		lo_number;$/;"	m	struct:loop_device
+lo_offset	src/loop.c	/^	compat_int_t	lo_offset;$/;"	m	struct:compat_loop_info	file:
+lo_offset	src/loop.h	/^	loff_t		lo_offset;$/;"	m	struct:loop_device
+lo_open	src/loop.c	/^static int lo_open(struct block_device *bdev, fmode_t mode)$/;"	f	file:
+lo_queue	src/loop.h	/^	struct request_queue	*lo_queue;$/;"	m	struct:loop_device	typeref:struct:loop_device::request_queue
+lo_rdevice	src/loop.c	/^	compat_dev_t	lo_rdevice;     \/* ioctl r\/o *\/$/;"	m	struct:compat_loop_info	file:
+lo_read_simple	src/loop.c	/^static int lo_read_simple(struct loop_device *lo, struct request *rq,$/;"	f	file:
+lo_read_transfer	src/loop.c	/^static int lo_read_transfer(struct loop_device *lo, struct request *rq,$/;"	f	file:
+lo_refcnt	src/loop.h	/^	atomic_t	lo_refcnt;$/;"	m	struct:loop_device
+lo_release	src/loop.c	/^static void lo_release(struct gendisk *disk, fmode_t mode)$/;"	f	file:
+lo_req_flush	src/loop.c	/^static int lo_req_flush(struct loop_device *lo, struct request *rq)$/;"	f	file:
+lo_rw_aio	src/loop.c	/^static int lo_rw_aio(struct loop_device *lo, struct loop_cmd *cmd,$/;"	f	file:
+lo_rw_aio_complete	src/loop.c	/^static void lo_rw_aio_complete(struct kiocb *iocb, long ret, long ret2)$/;"	f	file:
+lo_rw_aio_do_completion	src/loop.c	/^static void lo_rw_aio_do_completion(struct loop_cmd *cmd)$/;"	f	file:
+lo_sizelimit	src/loop.h	/^	loff_t		lo_sizelimit;$/;"	m	struct:loop_device
+lo_state	src/loop.h	/^	int			lo_state;$/;"	m	struct:loop_device
+lo_write_bvec	src/loop.c	/^static int lo_write_bvec(struct file *file, struct bio_vec *bvec, loff_t *ppos)$/;"	f	file:
+lo_write_simple	src/loop.c	/^static int lo_write_simple(struct loop_device *lo, struct request *rq,$/;"	f	file:
+lo_write_transfer	src/loop.c	/^static int lo_write_transfer(struct loop_device *lo, struct request *rq,$/;"	f	file:
+load_merge_index	src/lsmt_ro_file.c	/^static struct lsmt_ro_index *load_merge_index(void **files, size_t n, struct lsmt_ht *ht)$/;"	f	file:
+loop-objs	Makefile	/^loop-objs := .\/src\/loop.o .\/src\/lsmt_ro_file.o$/;"	m
+loop_add	src/loop.c	/^static int loop_add(struct loop_device **l, int i)$/;"	f	file:
+loop_alloc_mfile	src/loop.c	/^static void loop_alloc_mfile(struct loop_mfile *mf, size_t fcnt)$/;"	f	file:
+loop_attr_autoclear_show	src/loop.c	/^static ssize_t loop_attr_autoclear_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attr_backing_file_show	src/loop.c	/^static ssize_t loop_attr_backing_file_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attr_dio_show	src/loop.c	/^static ssize_t loop_attr_dio_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attr_offset_show	src/loop.c	/^static ssize_t loop_attr_offset_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attr_partscan_show	src/loop.c	/^static ssize_t loop_attr_partscan_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attr_show	src/loop.c	/^static ssize_t loop_attr_show(struct device *dev, char *page,$/;"	f	file:
+loop_attr_sizelimit_show	src/loop.c	/^static ssize_t loop_attr_sizelimit_show(struct loop_device *lo, char *buf)$/;"	f	file:
+loop_attribute_group	src/loop.c	/^static struct attribute_group loop_attribute_group = {$/;"	v	typeref:struct:attribute_group	file:
+loop_attrs	src/loop.c	/^static struct attribute *loop_attrs[] = {$/;"	v	typeref:struct:attribute	file:
+loop_change_fd	src/loop.c	/^static int loop_change_fd(struct loop_device *lo, struct block_device *bdev,$/;"	f	file:
+loop_clr_fd	src/loop.c	/^static int loop_clr_fd(struct loop_device *lo)$/;"	f	file:
+loop_clr_fd_mfile	src/loop.c	/^static int loop_clr_fd_mfile(struct loop_device *lo)$/;"	f	file:
+loop_cmd	src/loop.h	/^struct loop_cmd {$/;"	s
+loop_config_discard	src/loop.c	/^static void loop_config_discard(struct loop_device *lo)$/;"	f	file:
+loop_control_ioctl	src/loop.c	/^static long loop_control_ioctl(struct file *file, unsigned int cmd,$/;"	f	file:
+loop_copy_mfile	src/loop.c	/^static void loop_copy_mfile(struct loop_mfile *src, struct loop_mfile *dst)$/;"	f	file:
+loop_ctl_fops	src/loop.c	/^static const struct file_operations loop_ctl_fops = {$/;"	v	typeref:struct:file_operations	file:
+loop_device	src/loop.h	/^struct loop_device {$/;"	s
+loop_exit	src/loop.c	/^module_exit(loop_exit);$/;"	v
+loop_exit	src/loop.c	/^static void __exit loop_exit(void)$/;"	f	file:
+loop_exit_cb	src/loop.c	/^static int loop_exit_cb(int id, void *ptr, void *data)$/;"	f	file:
+loop_free_mfile	src/loop.c	/^static void loop_free_mfile(struct loop_mfile *mf, size_t fcnt)$/;"	f	file:
+loop_func_table	src/loop.h	/^struct loop_func_table {$/;"	s
+loop_get_status	src/loop.c	/^loop_get_status(struct loop_device *lo, struct loop_info64 *info)$/;"	f	file:
+loop_get_status64	src/loop.c	/^loop_get_status64(struct loop_device *lo, struct loop_info64 __user *arg) {$/;"	f	file:
+loop_get_status64_mfile	src/loop.c	/^loop_get_status64_mfile(struct loop_device *lo, struct loop_info64 __user *arg) {$/;"	f	file:
+loop_get_status_compat	src/loop.c	/^loop_get_status_compat(struct loop_device *lo,$/;"	f	file:
+loop_get_status_mfile	src/loop.c	/^loop_get_status_mfile(struct loop_device *lo, struct loop_info64 *info)$/;"	f	file:
+loop_get_status_old	src/loop.c	/^loop_get_status_old(struct loop_device *lo, struct loop_info __user *arg) {$/;"	f	file:
+loop_handle_cmd	src/loop.c	/^static void loop_handle_cmd(struct loop_cmd *cmd)$/;"	f	file:
+loop_info64_from_compat	src/loop.c	/^loop_info64_from_compat(const struct compat_loop_info __user *arg,$/;"	f	file:
+loop_info64_from_old	src/loop.c	/^loop_info64_from_old(const struct loop_info *info, struct loop_info64 *info64)$/;"	f	file:
+loop_info64_to_compat	src/loop.c	/^loop_info64_to_compat(const struct loop_info64 *info64,$/;"	f	file:
+loop_info64_to_old	src/loop.c	/^loop_info64_to_old(const struct loop_info64 *info64, struct loop_info *info)$/;"	f	file:
+loop_init	src/loop.c	/^module_init(loop_init);$/;"	v
+loop_init	src/loop.c	/^static int __init loop_init(void)$/;"	f	file:
+loop_init_lsmtfile	src/loop.c	/^static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const struct loop_mfile_fds __user *arg)$/;"	f	file:
+loop_init_request	src/loop.c	/^static int loop_init_request(struct blk_mq_tag_set *set, struct request *rq,$/;"	f	file:
+loop_init_xfer	src/loop.c	/^loop_init_xfer(struct loop_device *lo, struct loop_func_table *xfer,$/;"	f	file:
+loop_kthread_worker_fn	src/loop.c	/^static int loop_kthread_worker_fn(void *worker_ptr)$/;"	f	file:
+loop_lookup	src/loop.c	/^static int loop_lookup(struct loop_device **l, int i)$/;"	f	file:
+loop_misc	src/loop.c	/^static struct miscdevice loop_misc = {$/;"	v	typeref:struct:miscdevice	file:
+loop_mq_ops	src/loop.c	/^static const struct blk_mq_ops loop_mq_ops = {$/;"	v	typeref:struct:blk_mq_ops	file:
+loop_prepare_queue	src/loop.c	/^static int loop_prepare_queue(struct loop_device *lo)$/;"	f	file:
+loop_probe	src/loop.c	/^static struct kobject *loop_probe(dev_t dev, int *part, void *data)$/;"	f	file:
+loop_queue_rq	src/loop.c	/^static blk_status_t loop_queue_rq(struct blk_mq_hw_ctx *hctx,$/;"	f	file:
+loop_queue_work	src/loop.c	/^static void loop_queue_work(struct kthread_work *work)$/;"	f	file:
+loop_register_transfer	src/loop.c	/^EXPORT_SYMBOL(loop_register_transfer);$/;"	v
+loop_register_transfer	src/loop.c	/^int loop_register_transfer(struct loop_func_table *funcs)$/;"	f
+loop_release_xfer	src/loop.c	/^loop_release_xfer(struct loop_device *lo)$/;"	f	file:
+loop_remove	src/loop.c	/^static void loop_remove(struct loop_device *lo)$/;"	f	file:
+loop_reread_partitions	src/loop.c	/^static void loop_reread_partitions(struct loop_device *lo,$/;"	f	file:
+loop_set_block_size	src/loop.c	/^static int loop_set_block_size(struct loop_device *lo, unsigned long arg)$/;"	f	file:
+loop_set_capacity	src/loop.c	/^static int loop_set_capacity(struct loop_device *lo)$/;"	f	file:
+loop_set_dio	src/loop.c	/^static int loop_set_dio(struct loop_device *lo, unsigned long arg)$/;"	f	file:
+loop_set_fd	src/loop.c	/^static int loop_set_fd(struct loop_device *lo, fmode_t mode,$/;"	f	file:
+loop_set_fd_mfile	src/loop.c	/^static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,$/;"	f	file:
+loop_set_status	src/loop.c	/^loop_set_status(struct loop_device *lo, const struct loop_info64 *info)$/;"	f	file:
+loop_set_status64	src/loop.c	/^loop_set_status64(struct loop_device *lo, const struct loop_info64 __user *arg)$/;"	f	file:
+loop_set_status64_mfile	src/loop.c	/^loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user *arg)$/;"	f	file:
+loop_set_status_compat	src/loop.c	/^loop_set_status_compat(struct loop_device *lo,$/;"	f	file:
+loop_set_status_mfile	src/loop.c	/^loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)$/;"	f	file:
+loop_set_status_old	src/loop.c	/^loop_set_status_old(struct loop_device *lo, const struct loop_info __user *arg)$/;"	f	file:
+loop_sysfs_exit	src/loop.c	/^static void loop_sysfs_exit(struct loop_device *lo)$/;"	f	file:
+loop_sysfs_init	src/loop.c	/^static void loop_sysfs_init(struct loop_device *lo)$/;"	f	file:
+loop_unprepare_queue	src/loop.c	/^static void loop_unprepare_queue(struct loop_device *lo)$/;"	f	file:
+loop_unregister_transfer	src/loop.c	/^EXPORT_SYMBOL(loop_unregister_transfer);$/;"	v
+loop_unregister_transfer	src/loop.c	/^int loop_unregister_transfer(int number)$/;"	f
+loop_update_dio	src/loop.c	/^static inline void loop_update_dio(struct loop_device *lo)$/;"	f	file:
+loop_validate_file	src/loop.c	/^static int loop_validate_file(struct file *file, struct block_device *bdev)$/;"	f	file:
+lsmt_ht	src/lsmt_ro_file.c	/^struct lsmt_ht {$/;"	s	file:
+lsmt_pread	src/lsmt_ro_file.c	/^size_t lsmt_pread(struct lsmt_ro_file *file, $/;"	f
+lsmt_ro_file	src/lsmt_ro_file.h	/^struct lsmt_ro_file {$/;"	s
+lsmt_ro_index	src/lsmt_ro_file.h	/^struct lsmt_ro_index {$/;"	s
+m_files	src/lsmt_ro_file.h	/^        void* m_files[0];$/;"	m	struct:lsmt_ro_file
+m_files_count	src/lsmt_ro_file.h	/^        size_t m_files_count;$/;"	m	struct:lsmt_ro_file
+m_index	src/lsmt_ro_file.h	/^        struct lsmt_ro_index *m_index;$/;"	m	struct:lsmt_ro_file	typeref:struct:lsmt_ro_file::lsmt_ro_index
+m_ownership	src/lsmt_ro_file.h	/^        bool m_ownership;       $/;"	m	struct:lsmt_ro_file
+m_vsize	src/lsmt_ro_file.h	/^        uint64_t m_vsize;$/;"	m	struct:lsmt_ro_file
+magic0	src/lsmt_ro_file.c	/^        uint64_t magic0;$/;"	m	struct:lsmt_ht	file:
+magic1	src/lsmt_ro_file.c	/^        struct _UUID magic1;$/;"	m	struct:lsmt_ht	typeref:struct:lsmt_ht::_UUID	file:
+mapping	src/lsmt_ro_file.h	/^        struct segment_mapping mapping[0];$/;"	m	struct:lsmt_ro_index	typeref:struct:lsmt_ro_index::segment_mapping
+max_loop	src/loop.c	/^static int max_loop;$/;"	v	file:
+max_loop_setup	src/loop.c	/^static int __init max_loop_setup(char *str)$/;"	f	file:
+max_part	src/loop.c	/^static int max_part;$/;"	v	file:
+merge_indexes	src/lsmt_ro_file.c	/^static int merge_indexes(int level, $/;"	f	file:
+merge_memory_indexes	src/lsmt_ro_file.c	/^static struct lsmt_ro_index *merge_memory_indexes(struct lsmt_ro_index **indexes,$/;"	f	file:
+mfile	src/loop.h	/^	struct 		loop_mfile 	mfile;\/\/filenames$/;"	m	struct:loop_device	typeref:struct:loop_device::loop_mfile
+moffset	src/lsmt_ro_file.h	/^        uint64_t moffset : 55; \/\/ mapped offset (2^64 B if in sector)$/;"	m	struct:segment_mapping
+none_funcs	src/loop.c	/^static struct loop_func_table none_funcs = {$/;"	v	typeref:struct:loop_func_table	file:
+number	src/loop.h	/^	int number;	\/* filter type *\/ $/;"	m	struct:loop_func_table
+offset	src/loop.c	/^LOOP_ATTR_RO(offset);$/;"	v
+offset	src/lsmt_ro_file.h	/^        uint64_t offset : 50; \/\/ offset (0.5 PB if in sector)$/;"	m	struct:segment
+offset	src/lsmt_ro_file.h	/^        uint64_t offset : 50; \/\/ offset (0.5 PB if in sector)$/;"	m	struct:segment_mapping
+old_gfp_mask	src/loop.h	/^	gfp_t		old_gfp_mask;$/;"	m	struct:loop_device
+open_file	src/lsmt_ro_file.c	/^struct lsmt_ro_file *open_file(void *fd, bool ownership)$/;"	f
+open_files	src/lsmt_ro_file.c	/^struct lsmt_ro_file *open_files(void **files, size_t n, bool ownership)$/;"	f
+owner	src/loop.h	/^	struct module *owner;$/;"	m	struct:loop_func_table	typeref:struct:loop_func_table::module
+part_shift	src/loop.c	/^static int part_shift;$/;"	v	file:
+partscan	src/loop.c	/^LOOP_ATTR_RO(partscan);$/;"	v
+pbegin	src/lsmt_ro_file.h	/^        const struct segment_mapping *pbegin;$/;"	m	struct:lsmt_ro_index	typeref:struct:lsmt_ro_index::segment_mapping
+pend	src/lsmt_ro_file.h	/^        const struct segment_mapping *pend;$/;"	m	struct:lsmt_ro_index	typeref:struct:lsmt_ro_index::segment_mapping
+pr_fmt	src/loop.c	51;"	d	file:
+pr_fmt	src/lsmt_ro_file.c	15;"	d	file:
+print_segment	src/lsmt_ro_file.c	/^void print_segment(const struct segment *m)$/;"	f
+print_segment_mapping	src/lsmt_ro_file.c	/^void print_segment_mapping(const struct segment_mapping *m)$/;"	f
+ref	src/loop.h	/^	atomic_t ref; \/* only for aio *\/$/;"	m	struct:loop_cmd
+release	src/loop.h	/^	int (*release)(struct loop_device *); $/;"	m	struct:loop_func_table
+reserved	src/loop.c	/^	char		reserved[4];$/;"	m	struct:compat_loop_info	file:
+ret	src/loop.h	/^	long ret;$/;"	m	struct:loop_cmd
+ro_index_lookup	src/lsmt_ro_file.c	/^int ro_index_lookup(const struct lsmt_ro_index *index,$/;"	f
+ro_index_lower_bound	src/lsmt_ro_file.c	/^const struct segment_mapping *ro_index_lower_bound($/;"	f
+ro_index_size	src/lsmt_ro_file.c	/^size_t ro_index_size(const struct lsmt_ro_index *index)$/;"	f
+segment	src/lsmt_ro_file.h	/^struct segment {                             \/* 8 bytes *\/$/;"	s
+segment_end	src/lsmt_ro_file.c	/^static uint64_t segment_end(const void \/* const struct segment *\/ *m)$/;"	f	file:
+segment_mapping	src/lsmt_ro_file.h	/^struct segment_mapping {                             \/* 8 + 8 bytes *\/$/;"	s
+segment_mapping_mend	src/lsmt_ro_file.c	/^static uint64_t segment_mapping_mend(const struct segment_mapping *m)$/;"	f	file:
+set_max_io_size	src/lsmt_ro_file.c	/^int set_max_io_size(struct lsmt_ro_file *file, size_t size)$/;"	f
+size	src/lsmt_ro_file.c	/^        uint32_t size;  \/\/= sizeof(HeaderTrailer);$/;"	m	struct:lsmt_ht	file:
+sizelimit	src/loop.c	/^LOOP_ATTR_RO(sizelimit);$/;"	v
+sysfs_inited	src/loop.h	/^	bool			sysfs_inited;$/;"	m	struct:loop_device
+tag	src/lsmt_ro_file.h	/^        uint8_t tag;$/;"	m	struct:segment_mapping
+tag_set	src/loop.h	/^	struct blk_mq_tag_set	tag_set;$/;"	m	struct:loop_device	typeref:struct:loop_device::blk_mq_tag_set
+transfer	src/loop.h	/^	int		(*transfer)(struct loop_device *, int cmd,$/;"	m	struct:loop_device
+transfer	src/loop.h	/^	int (*transfer)(struct loop_device *lo, int cmd,$/;"	m	struct:loop_func_table
+transfer_xor	src/loop.c	/^static int transfer_xor(struct loop_device *lo, int cmd,$/;"	f	file:
+trim_edge	src/lsmt_ro_file.c	/^static void trim_edge(void *m,$/;"	f	file:
+unregister_transfer_cb	src/loop.c	/^static int unregister_transfer_cb(int id, void *ptr, void *data)$/;"	f	file:
+use_aio	src/loop.h	/^	bool use_aio; \/* use AIO interface to handle I\/O *\/$/;"	m	struct:loop_cmd
+use_dio	src/loop.h	/^	bool			use_dio;$/;"	m	struct:loop_device
+verify_magic	src/lsmt_ro_file.c	/^static bool verify_magic(const struct lsmt_ht *ht)$/;"	f	file:
+verify_mapping_moffset	src/lsmt_ro_file.c	/^static bool verify_mapping_moffset($/;"	f	file:
+verify_mapping_order	src/lsmt_ro_file.c	/^static bool verify_mapping_order($/;"	f	file:
+virtual_size	src/lsmt_ro_file.c	/^        uint64_t virtual_size; \/\/ in bytes$/;"	m	struct:lsmt_ht	file:
+work	src/loop.h	/^	struct kthread_work work;$/;"	m	struct:loop_cmd	typeref:struct:loop_cmd::kthread_work
+worker	src/loop.h	/^	struct kthread_worker	worker;$/;"	m	struct:loop_device	typeref:struct:loop_device::kthread_worker
+worker_task	src/loop.h	/^	struct task_struct	*worker_task;$/;"	m	struct:loop_device	typeref:struct:loop_device::task_struct
+xfer_funcs	src/loop.c	/^static struct loop_func_table *xfer_funcs[MAX_LO_CRYPT] = {$/;"	v	typeref:struct:loop_func_table	file:
+xor_funcs	src/loop.c	/^static struct loop_func_table xor_funcs = {$/;"	v	typeref:struct:loop_func_table	file:
+xor_init	src/loop.c	/^static int xor_init(struct loop_device *lo, const struct loop_info64 *info)$/;"	f	file:
+zeroed	src/lsmt_ro_file.h	/^        uint32_t zeroed : 1;   \/\/ indicating a zero-filled segment$/;"	m	struct:segment_mapping

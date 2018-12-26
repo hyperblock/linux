@@ -993,25 +993,28 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
 {
 
 	size_t i;
-	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	struct loop_mfile_fds kfds;
+	int IMAGE_RO_LAYERS;
+	struct loop_mfile_fds  *mfds;
+	struct lsmt_ro_file *ro = NULL;
+	struct file **files = NULL;
+
+
+
+	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	if(copy_from_user(&kfds, arg, sizeof(struct loop_mfile_fds))) return NULL;
-	const int IMAGE_RO_LAYERS = kfds.mfcnt;
+	IMAGE_RO_LAYERS = kfds.mfcnt;
 	pr_info("Now we have IMAGE_RO_LAYERS \n");
 
-	struct loop_mfile_fds  *mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
+	mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
 	pr_info("here ma i \n");
 	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
 	pr_info("here ma i \n");
 	
 	if(copy_from_user(mfds, arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
 	pr_info("here ma i \n");
-	
-	struct lsmt_ro_file *ro = NULL;
-	pr_info("here ma i \n");
 
-
-	struct file **files = kvmalloc(sizeof(struct file *) * IMAGE_RO_LAYERS, GFP_KERNEL);
+	files = kvmalloc(sizeof(struct file *) * IMAGE_RO_LAYERS, GFP_KERNEL);
 	for(i=0;i<IMAGE_RO_LAYERS;i++){
 		files[i] = fget(mfds->fds[i]);
 		if(!files[i]){
@@ -1031,7 +1034,7 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
         }
  
 	set_max_io_size(ro,  512  * 1024);
-	PRINT_INFO("file->MAX_IO_SIZE: %llu", ro->MAX_IO_SIZE);
+	PRINT_INFO("file->MAX_IO_SIZE: %lu", ro->MAX_IO_SIZE);
 	kvfree(files);
 	return ro;
 }
@@ -1046,7 +1049,7 @@ static void loop_alloc_mfile(struct loop_mfile *mf, size_t fcnt)
 	}
 }
 
-static void loop_free_mfile(struct loop_mfile *mf, size_t fcnt)
+static void loop_free_mfile(const struct loop_mfile *mf, size_t fcnt)
 {
 	size_t i;
 	for(i=0;i<fcnt;i++){
@@ -1055,12 +1058,12 @@ static void loop_free_mfile(struct loop_mfile *mf, size_t fcnt)
 	kvfree(mf->filenames);
 }
 
-static void loop_copy_mfile(struct loop_mfile *src, struct loop_mfile *dst)
+static void loop_copy_mfile(const struct loop_mfile *src, struct loop_mfile *dst)
 {
-	BUG_ON(src->filenames==NULL);	
-	BUG_ON(dst->filenames==NULL);	
 	size_t n = src->mfcnt;
 	size_t i;
+	BUG_ON(src->filenames==NULL);	
+	BUG_ON(dst->filenames==NULL);	
 	dst->mfcnt = src->mfcnt;
 	for(i=0;i<n;i++){
 		memcpy(src->filenames[i],dst->filenames[i],LO_NAME_SIZE);
@@ -1076,7 +1079,8 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	int		error;
 	loff_t		size;
 	struct lsmt_ro_file	*lsmtfile;
-	size_t 		i,j = 0;
+	size_t 		i = 0;
+	size_t		j = 0;
 	//struct file	*file;
 	struct address_space 	*mapping;
 	struct 		file	**files = NULL;	
@@ -1096,7 +1100,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	files = kvmalloc(sizeof(struct file *) * n, GFP_KERNEL);
 	for(i=0; i<n; i++)
 	{
-		files[i] = fget(lsmtfile->m_files[i]);	
+		files[i] = fget((int)(uint64_t)lsmtfile->m_files[i]);	
 		if(!files[i])
 			goto out;
 	}	
@@ -1316,7 +1320,7 @@ static int loop_clr_fd(struct loop_device *lo)
 static int loop_clr_fd_mfile(struct loop_device *lo)
 {
 	struct file **filps = lo->lo_backing_files;
-	gfp_t gfp = lo->old_gfp_mask;
+	//gfp_t gfp = lo->old_gfp_mask;
 	struct block_device *bdev = lo->lo_device;
 	size_t i,n;
 	n = lo->lo_lsmt_ro_file->m_files_count;
@@ -1549,7 +1553,7 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 	loop_config_discard(lo);
 
 	loop_copy_mfile(&info->mfile,&lo->mfile);
-	loop_free_mfile(&info->mfile,&lo->mfile.mfcnt);
+	loop_free_mfile(&info->mfile,lo->mfile.mfcnt);
 	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
 	memcpy(lo->lo_crypt_name, info->lo_crypt_name, LO_NAME_SIZE);
 	lo->lo_file_name[LO_NAME_SIZE-1] = 0;
@@ -1753,10 +1757,12 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 {
 	struct loop_info64 info64;
 	size_t i=0;
-	size_t n = info64.mfile.mfcnt;
+	size_t n;
 
 	if (copy_from_user(&info64, arg, sizeof (struct loop_info64)))
 		return -EFAULT;
+	n = info64.mfile.mfcnt;
+
 	loop_alloc_mfile(&info64.mfile,n);
 	for(i=0;i<n;i++){
 		if(copy_from_user(info64.mfile.filenames[i],arg->mfile.filenames[i],LO_NAME_SIZE))
@@ -1804,19 +1810,19 @@ loop_get_status64(struct loop_device *lo, struct loop_info64 __user *arg) {
 static int
 loop_get_status64_mfile(struct loop_device *lo, struct loop_info64 __user *arg) {
 	struct loop_info64 info64;
-	loop_alloc_mfile(&info64.mfile,lo->mfile.mfcnt);
-	int err;
+	int err=0;
 	size_t i=0;
-	size_t n = info64.mfile.mfcnt;
+	//size_t n = info64.mfile.mfcnt;
+	size_t n = 0;
+	loop_alloc_mfile(&info64.mfile,lo->mfile.mfcnt);
 	if (!arg) {
 		mutex_unlock(&lo->lo_ctl_mutex);
 		return -EINVAL;
 	}
-
 	err = loop_get_status_mfile(lo, &info64);
 	if (!err && copy_to_user(arg, &info64, sizeof(info64)))
 		err = -EFAULT;
-
+	n = info64.mfile.mfcnt;
 	for(i=0;i<n;i++){
 		if(copy_to_user(arg->mfile.filenames[i], info64.mfile.filenames[i], LO_NAME_SIZE))
 			return -EFAULT;
