@@ -1104,7 +1104,7 @@ static void loop_alloc_mfile(struct loop_mfile *mf, size_t fcnt)
 	mf->filenames = kvmalloc(fcnt * sizeof(char *),GFP_KERNEL);
 	mf->mfcnt = fcnt;
 	for(i=0;i<fcnt;i++){
-		mf->filenames[i] = kvmalloc(LO_NAME_SIZE * sizeof(char),GFP_KERNEL);
+		mf->filenames[i] = (char *)kvzalloc(LO_NAME_SIZE * sizeof(char),GFP_KERNEL);
 	}
 }
 
@@ -1125,8 +1125,12 @@ static void loop_copy_mfile(const struct loop_mfile *src, struct loop_mfile *dst
 	BUG_ON(dst->filenames==NULL);	
 	dst->mfcnt = src->mfcnt;
 	for(i=0;i<n;i++){
-		memcpy(src->filenames[i],dst->filenames[i],LO_NAME_SIZE);
+		pr_info("src->filenames[%lu] is %s, LO_NAME_SIZE is %d\n", i, src->filenames[i], LO_NAME_SIZE);
+		memcpy((char *)src->filenames[i], (char *)dst->filenames[i], LO_NAME_SIZE);
+		dst->filenames[LO_NAME_SIZE-1] = 0;
+		pr_info("dst->filenames[%lu] is %s\n", i, dst->filenames[i]);
 	}
+		pr_info("dst->filenames[%lu] is %s\n", 0, dst->filenames[0]);
 } 
 
 
@@ -1149,7 +1153,8 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	if(lsmtfile==NULL) goto out;
 	lo->lo_lsmt_ro_file = lsmtfile;
 
-	pr_info(" Before alloc mfile\n");
+	n = lsmtfile->m_files_count;
+	pr_info(" Before alloc mfile alloc %lu files\n",n);
 	loop_alloc_mfile(&lo->mfile,n);
 	pr_info(" After alloc mfile\n");
 
@@ -1584,12 +1589,18 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 		}
 	}
 
+	pr_info("here\n");
 	loop_config_discard_mfile(lo);
+	pr_info("here\n");
 
 	loop_copy_mfile(&info->mfile,&lo->mfile);
+	pr_info("here\n");
 	loop_free_mfile(&info->mfile,lo->mfile.mfcnt);
+	pr_info("here\n");
 	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
+	pr_info("here\n");
 	memcpy(lo->lo_crypt_name, info->lo_crypt_name, LO_NAME_SIZE);
+	pr_info("here\n");
 	lo->lo_file_name[LO_NAME_SIZE-1] = 0;
 	lo->lo_crypt_name[LO_NAME_SIZE-1] = 0;
 
@@ -1798,16 +1809,19 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 	if (copy_from_user(&info64, arg, sizeof (struct loop_info64)))
 		return -EFAULT;
 	n = info64.mfile.mfcnt;
-
+	//fns is userspace pointer
 	fns = info64.mfile.filenames;
 
 	loop_alloc_mfile(&info64.mfile, n);
 	for(i=0;i<n;i++){
-		if(copy_from_user(info64.mfile.filenames[i],fns+i*LO_NAME_SIZE,LO_NAME_SIZE))
+		if(copy_from_user(info64.mfile.filenames[i], 
+			fns[i], LO_NAME_SIZE))
+		{
+			pr_info("failed to copy from user in %lu\n",i);
 			return -EFAULT;
-		pr_info("info64 file[%lu] = %s\n", i, info64.mfile.filenames[i]);
+		}
+		pr_info("filenames[%lu] = %s\n", i, info64.mfile.filenames[i]);
 	}	
-
 	return loop_set_status_mfile(lo, &info64);
 }
 
