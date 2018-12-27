@@ -894,6 +894,42 @@ static void loop_config_discard(struct loop_device *lo)
 	blk_queue_flag_set(QUEUE_FLAG_DISCARD, q);
 }
 
+/*
+* lsmt_ro_file is backed by block device, here we
+* duplicate backing block device's discard in the 
+* loop-emulated block device
+*/
+static void loop_config_discard_mfile(struct loop_device *lo)
+{
+	struct file *file = lo->lo_backing_files[0];
+	struct inode *inode = file->f_mapping->host;
+	struct request_queue *q = lo->lo_queue;
+
+	/*
+	 * We use punch hole to reclaim the free space used by the
+	 * image a.k.a. discard. However we do not support discard if
+	 * encryption is enabled, because it may give an attacker
+	 * useful information.
+	 */
+	if ((!file->f_op->fallocate) ||
+	    lo->lo_encrypt_key_size) {
+		q->limits.discard_granularity = 0;
+		q->limits.discard_alignment = 0;
+		blk_queue_max_discard_sectors(q, 0);
+		blk_queue_max_write_zeroes_sectors(q, 0);
+		blk_queue_flag_clear(QUEUE_FLAG_DISCARD, q);
+		return;
+	}
+
+	q->limits.discard_granularity = inode->i_sb->s_blocksize;
+	q->limits.discard_alignment = 0;
+
+	blk_queue_max_discard_sectors(q, UINT_MAX >> 9);
+	blk_queue_max_write_zeroes_sectors(q, UINT_MAX >> 9);
+	blk_queue_flag_set(QUEUE_FLAG_DISCARD, q);
+}
+
+
 static void loop_unprepare_queue(struct loop_device *lo)
 {
 	kthread_flush_worker(&lo->worker);
@@ -1548,7 +1584,7 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 		}
 	}
 
-	loop_config_discard(lo);
+	loop_config_discard_mfile(lo);
 
 	loop_copy_mfile(&info->mfile,&lo->mfile);
 	loop_free_mfile(&info->mfile,lo->mfile.mfcnt);
@@ -1769,7 +1805,7 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 	for(i=0;i<n;i++){
 		if(copy_from_user(info64.mfile.filenames[i],fns+i*LO_NAME_SIZE,LO_NAME_SIZE))
 			return -EFAULT;
-		pr_info("info64 file[%d] = %s\n",i,info64.mfile.filenames[i]);
+		pr_info("info64 file[%lu] = %s\n", i, info64.mfile.filenames[i]);
 	}	
 
 	return loop_set_status_mfile(lo, &info64);
