@@ -1126,7 +1126,8 @@ static void loop_copy_mfile(const struct loop_mfile *src, struct loop_mfile *dst
 	dst->mfcnt = src->mfcnt;
 	for(i=0;i<n;i++){
 		pr_info("src->filenames[%lu] is %s, LO_NAME_SIZE is %d\n", i, src->filenames[i], LO_NAME_SIZE);
-		memcpy((char *)src->filenames[i], (char *)dst->filenames[i], LO_NAME_SIZE);
+		//memcpy((char *)src->filenames[i], (char *)dst->filenames[i], LO_NAME_SIZE);
+		memcpy((char *)dst->filenames[i], (char *)src->filenames[i], LO_NAME_SIZE);
 		dst->filenames[LO_NAME_SIZE-1] = 0;
 		pr_info("dst->filenames[%lu] is %s\n", i, dst->filenames[i]);
 	}
@@ -1803,25 +1804,50 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 	struct loop_info64 info64;
 	size_t i=0;
 	size_t n;
-
-	uint8_t **fns;
-
+	uint8_t **fns;	
 	if (copy_from_user(&info64, arg, sizeof (struct loop_info64)))
 		return -EFAULT;
 	n = info64.mfile.mfcnt;
-	//fns is userspace pointer
 	fns = info64.mfile.filenames;
 
 	loop_alloc_mfile(&info64.mfile, n);
-	for(i=0;i<n;i++){
-		if(copy_from_user(info64.mfile.filenames[i], 
-			fns[i], LO_NAME_SIZE))
+
+	#if 0
+	unsigned long * tgt=kvmalloc(sizeof(char *),GFP_KERNEL);
+	copy_from_user(tgt, fns, sizeof(char *));
+	pr_info("tgt is %lx\n", *tgt);
+
+	copy_from_user(info64.mfile.filenames[0], *tgt, LO_NAME_SIZE);
+	pr_info("tgt is %lx\n",*tgt);
+	pr_info("filenames[%lu] = %s\n", 0, info64.mfile.filenames[0]);
+	#endif
+
+
+//	BUG_ON(1);
+	uint64_t **tgts = kvmalloc(sizeof(char *)*n,GFP_KERNEL);
+	
+	for(i=0; i<n; i++){
+
+	pr_info("here\n");
+		//if(copy_from_user(tgt[i], fns + i*sizeof(char *), sizeof(char *))){
+		if(copy_from_user(tgts + i*sizeof(char *), fns + i*sizeof(char *), sizeof(char *))){
+			pr_info("failed to copy pointer from user with i = %lu\n",i);
+			BUG_ON(1);
+		}	
+
+	pr_info("tgts is %lx\n", tgts[i]);//U
+	//pr_info("tgts points to %lx\n", *tgts[i]);//U
+	pr_info("here\n");
+		if(copy_from_user(info64.mfile.filenames[i], tgts[i], LO_NAME_SIZE))
 		{
-			pr_info("failed to copy from user in %lu\n",i);
-			return -EFAULT;
+			pr_info("failed to copy from user with i = %lu\n",i);
+			BUG_ON(1);
+
 		}
+		
 		pr_info("filenames[%lu] = %s\n", i, info64.mfile.filenames[i]);
 	}	
+	kvfree(tgts);
 	return loop_set_status_mfile(lo, &info64);
 }
 
