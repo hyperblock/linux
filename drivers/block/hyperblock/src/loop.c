@@ -1626,9 +1626,10 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 	/* update dio if lo_offset or transfer is changed */
 	//__loop_update_dio(lo, lo->use_dio);
 	// no need dio in hyperblock
-
+	pr_info("here\n");
  exit:
 	blk_mq_unfreeze_queue(lo->lo_queue);
+	pr_info("here\n");
 
 	if (!err && (info->lo_flags & LO_FLAGS_PARTSCAN) &&
 	     !(lo->lo_flags & LO_FLAGS_PARTSCAN)) {
