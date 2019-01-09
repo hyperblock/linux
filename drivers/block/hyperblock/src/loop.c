@@ -316,6 +316,26 @@ static int lo_write_simple(struct loop_device *lo, struct request *rq,
 	return ret;
 }
 
+
+static int lo_write_simple_mfile(struct loop_device *lo, struct request *rq,
+		loff_t pos)
+{
+	BUG_ON(1);
+	struct bio_vec bvec;
+	struct req_iterator iter;
+	int ret = 0;
+
+	rq_for_each_segment(bvec, rq, iter) {
+		ret = lo_write_bvec(lo->lo_backing_file, &bvec, &pos);
+		if (ret < 0)
+			break;
+		cond_resched();
+	}
+
+	return ret;
+}
+
+
 /*
  * This is the slow, transforming version that needs to double buffer the
  * data as it cannot do the transformations in place without having direct
@@ -351,6 +371,44 @@ static int lo_write_transfer(struct loop_device *lo, struct request *rq,
 	return ret;
 }
 
+/*
+ * This is the slow, transforming version that needs to double buffer the
+ * data as it cannot do the transformations in place without having direct
+ * access to the destination pages of the backing file.
+ */
+static int lo_write_transfer_mfile(struct loop_device *lo, struct request *rq,
+		loff_t pos)
+{
+	BUG_ON(1);
+	struct bio_vec bvec, b;
+	struct req_iterator iter;
+	struct page *page;
+	int ret = 0;
+
+	page = alloc_page(GFP_NOIO);
+	if (unlikely(!page))
+		return -ENOMEM;
+
+	rq_for_each_segment(bvec, rq, iter) {
+		ret = lo_do_transfer(lo, WRITE, page, 0, bvec.bv_page,
+			bvec.bv_offset, bvec.bv_len, pos >> 9);
+		if (unlikely(ret))
+			break;
+
+		b.bv_page = page;
+		b.bv_offset = 0;
+		b.bv_len = bvec.bv_len;
+		ret = lo_write_bvec(lo->lo_backing_file, &b, &pos);
+		if (ret < 0)
+			break;
+	}
+
+	__free_page(page);
+	return ret;
+}
+
+
+
 static int lo_read_simple(struct loop_device *lo, struct request *rq,
 		loff_t pos)
 {
@@ -379,6 +437,43 @@ static int lo_read_simple(struct loop_device *lo, struct request *rq,
 
 	return 0;
 }
+
+static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
+		loff_t pos)
+{
+	struct bio_vec bvec;
+	struct req_iterator iter;
+	struct iov_iter i;
+	ssize_t len;
+
+	rq_for_each_segment(bvec, rq, iter) {
+		//init iov_iter i with bvec, length is bvec.bv_len
+		iov_iter_bvec(&i, ITER_BVEC, &bvec, 1, bvec.bv_len);
+		//break here to see the parameters to vfs_iter_read
+		//dump stack and see if we can find out who initiated this read 
+		PRINT_INFO("Before vfs_iter_read, pos is %lx",pos);
+
+		BUG_ON(1);
+		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
+		if (len < 0)
+			return len;
+
+		flush_dcache_page(bvec.bv_page);
+
+		if (len != bvec.bv_len) {
+			struct bio *bio;
+
+			__rq_for_each_bio(bio, rq)
+				zero_fill_bio(bio);
+			break;
+		}
+		cond_resched();
+	}
+
+	return 0;
+}
+
+
 
 static int lo_read_transfer(struct loop_device *lo, struct request *rq,
 		loff_t pos)
@@ -430,6 +525,61 @@ out_free_page:
 	return ret;
 }
 
+
+
+static int lo_read_transfer_mfile(struct loop_device *lo, struct request *rq,
+		loff_t pos)
+{
+	struct bio_vec bvec, b;
+	struct req_iterator iter;
+	struct iov_iter i;
+	struct page *page;
+	ssize_t len;
+	int ret = 0;
+
+	page = alloc_page(GFP_NOIO);
+	if (unlikely(!page))
+		return -ENOMEM;
+
+	rq_for_each_segment(bvec, rq, iter) {
+		loff_t offset = pos;
+
+		b.bv_page = page;
+		b.bv_offset = 0;
+		b.bv_len = bvec.bv_len;
+
+		iov_iter_bvec(&i, ITER_BVEC, &b, 1, b.bv_len);
+		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
+		if (len < 0) {
+			ret = len;
+			goto out_free_page;
+		}
+
+		ret = lo_do_transfer(lo, READ, page, 0, bvec.bv_page,
+			bvec.bv_offset, len, offset >> 9);
+		if (ret)
+			goto out_free_page;
+
+		flush_dcache_page(bvec.bv_page);
+
+		if (len != bvec.bv_len) {
+			struct bio *bio;
+
+			__rq_for_each_bio(bio, rq)
+				zero_fill_bio(bio);
+			break;
+		}
+	}
+
+	ret = 0;
+out_free_page:
+	__free_page(page);
+	return ret;
+}
+
+
+
+
 static int lo_discard(struct loop_device *lo, struct request *rq, loff_t pos)
 {
 	/*
@@ -454,6 +604,34 @@ static int lo_discard(struct loop_device *lo, struct request *rq, loff_t pos)
 	return ret;
 }
 
+
+static int lo_discard_mfile(struct loop_device *lo, struct request *rq, loff_t pos)
+{
+	BUG_ON(1);
+	/*
+	 * We use punch hole to reclaim the free space used by the
+	 * image a.k.a. discard. However we do not support discard if
+	 * encryption is enabled, because it may give an attacker
+	 * useful information.
+	 */
+	struct file *file = lo->lo_backing_file;
+	int mode = FALLOC_FL_PUNCH_HOLE | FALLOC_FL_KEEP_SIZE;
+	int ret;
+
+	if ((!file->f_op->fallocate) || lo->lo_encrypt_key_size) {
+		ret = -EOPNOTSUPP;
+		goto out;
+	}
+
+	ret = file->f_op->fallocate(file, mode, pos, blk_rq_bytes(rq));
+	if (unlikely(ret && ret != -EINVAL && ret != -EOPNOTSUPP))
+		ret = -EIO;
+ out:
+	return ret;
+}
+
+
+
 static int lo_req_flush(struct loop_device *lo, struct request *rq)
 {
 	struct file *file = lo->lo_backing_file;
@@ -463,6 +641,20 @@ static int lo_req_flush(struct loop_device *lo, struct request *rq)
 
 	return ret;
 }
+
+
+static int lo_req_flush_mfile(struct loop_device *lo, struct request *rq)
+{
+	BUG_ON(1);
+	struct file *file = lo->lo_backing_file;
+	int ret = vfs_fsync(file, 0);
+	if (unlikely(ret && ret != -EINVAL))
+		ret = -EIO;
+
+	return ret;
+}
+
+
 
 static void lo_complete_rq(struct request *rq)
 {
@@ -591,6 +783,81 @@ static int lo_rw_aio(struct loop_device *lo, struct loop_cmd *cmd,
 	return 0;
 }
 
+static int lo_rw_aio_mfile(struct loop_device *lo, struct loop_cmd *cmd,
+		     loff_t pos, bool rw)
+{
+	BUG_ON(1);
+	struct iov_iter iter;
+	struct bio_vec *bvec;
+	struct request *rq = blk_mq_rq_from_pdu(cmd);
+	struct bio *bio = rq->bio;
+	struct file *file = lo->lo_backing_file;
+	unsigned int offset;
+	int segments = 0;
+	int ret;
+
+	if (rq->bio != rq->biotail) {
+		struct req_iterator iter;
+		struct bio_vec tmp;
+
+		__rq_for_each_bio(bio, rq)
+			segments += bio_segments(bio);
+		bvec = kmalloc(sizeof(struct bio_vec) * segments, GFP_NOIO);
+		if (!bvec)
+			return -EIO;
+		cmd->bvec = bvec;
+
+		/*
+		 * The bios of the request may be started from the middle of
+		 * the 'bvec' because of bio splitting, so we can't directly
+		 * copy bio->bi_iov_vec to new bvec. The rq_for_each_segment
+		 * API will take care of all details for us.
+		 */
+		rq_for_each_segment(tmp, rq, iter) {
+			*bvec = tmp;
+			bvec++;
+		}
+		bvec = cmd->bvec;
+		offset = 0;
+	} else {
+		/*
+		 * Same here, this bio may be started from the middle of the
+		 * 'bvec' because of bio splitting, so offset from the bvec
+		 * must be passed to iov iterator
+		 */
+		offset = bio->bi_iter.bi_bvec_done;
+		bvec = __bvec_iter_bvec(bio->bi_io_vec, bio->bi_iter);
+		segments = bio_segments(bio);
+	}
+	atomic_set(&cmd->ref, 2);
+
+	iov_iter_bvec(&iter, ITER_BVEC | rw, bvec,
+		      segments, blk_rq_bytes(rq));
+	iter.iov_offset = offset;
+
+	cmd->iocb.ki_pos = pos;
+	cmd->iocb.ki_filp = file;
+	cmd->iocb.ki_complete = lo_rw_aio_complete;
+	cmd->iocb.ki_flags = IOCB_DIRECT;
+	if (cmd->css)
+		kthread_associate_blkcg(cmd->css);
+
+	if (rw == WRITE)
+		ret = call_write_iter(file, &cmd->iocb, &iter);
+	else
+		ret = call_read_iter(file, &cmd->iocb, &iter);
+
+	lo_rw_aio_do_completion(cmd);
+	kthread_associate_blkcg(NULL);
+
+	if (ret != -EIOCBQUEUED)
+		cmd->iocb.ki_complete(&cmd->iocb, ret, 0);
+	return 0;
+}
+
+
+
+
 static int do_req_filebacked(struct loop_device *lo, struct request *rq)
 {
 	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
@@ -631,6 +898,48 @@ static int do_req_filebacked(struct loop_device *lo, struct request *rq)
 		break;
 	}
 }
+
+static int do_req_filebacked_mfile(struct loop_device *lo, struct request *rq)
+{
+	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
+	loff_t pos = ((loff_t) blk_rq_pos(rq) << 9) + lo->lo_offset;
+
+	/*
+	 * lo_write_simple and lo_read_simple should have been covered
+	 * by io submit style function like lo_rw_aio(), one blocker
+	 * is that lo_read_simple() need to call flush_dcache_page after
+	 * the page is written from kernel, and it isn't easy to handle
+	 * this in io submit style function which submits all segments
+	 * of the req at one time. And direct read IO doesn't need to
+	 * run flush_dcache_page().
+	 */
+	switch (req_op(rq)) {
+	case REQ_OP_FLUSH:
+		return lo_req_flush_mfile(lo, rq);
+	case REQ_OP_DISCARD:
+	case REQ_OP_WRITE_ZEROES:
+		return lo_discard_mfile(lo, rq, pos);
+	case REQ_OP_WRITE:
+		if (lo->transfer)
+			return lo_write_transfer_mfile(lo, rq, pos);
+		else if (cmd->use_aio)
+			return lo_rw_aio_mfile(lo, cmd, pos, WRITE);
+		else
+			return lo_write_simple_mfile(lo, rq, pos);
+	case REQ_OP_READ:
+		if (lo->transfer)
+			return lo_read_transfer_mfile(lo, rq, pos);
+		else if (cmd->use_aio)
+			return lo_rw_aio_mfile(lo, cmd, pos, READ);
+		else
+			return lo_read_simple_mfile(lo, rq, pos);
+	default:
+		WARN_ON_ONCE(1);
+		return -EIO;
+		break;
+	}
+}
+
 
 static inline void loop_update_dio(struct loop_device *lo)
 {
@@ -2361,7 +2670,9 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 		goto failed;
 	}
 
-	ret = do_req_filebacked(lo, rq);
+	//ret = do_req_filebacked(lo, rq);
+	ret = do_req_filebacked_mfile(lo, rq);
+	
  failed:
 	/* complete non-aio request */
 	if (!cmd->use_aio || ret) {
