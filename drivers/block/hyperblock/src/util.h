@@ -15,6 +15,6 @@
         do { if ((HBDEBUG)) \
         printk(KERN_ERR fmt, ## __VA_ARGS__);} while (0)
 #define ASSERT(exp)                                             \
-        BUG_ON(exp)       
+        BUG_ON(!(exp))       
 #endif
 

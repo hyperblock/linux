@@ -37,8 +37,14 @@
 #define PRINT_ERROR(fmt, ...)                                          \
 	do { if ((1)) \
 	printk(KERN_ERR fmt, ## __VA_ARGS__);} while (0)
-#define ASSERT(exp)						\
-	BUG_ON(exp)
+//#define ASSERT(exp)						\
+//	assert(exp)
+#define ASSERT(x)                                                       \
+do {    if (x) break;                                                   \
+        printk(KERN_EMERG "### ASSERTION FAILED %s: %s: %d: %s\n",      \
+               __FILE__, __func__, __LINE__, #x); dump_stack(); BUG();  \
+} while (0)
+
 #endif
 
 
@@ -58,7 +64,7 @@
 struct segment {                             /* 8 bytes */
         uint64_t offset : 50; // offset (0.5 PB if in sector)
         uint32_t length : 14; // length (8MB if in sector)
-} /* __attribute__((packed)); */;
+}__attribute__((packed));
 
 struct segment_mapping {                             /* 8 + 8 bytes */
         uint64_t offset : 50; // offset (0.5 PB if in sector)

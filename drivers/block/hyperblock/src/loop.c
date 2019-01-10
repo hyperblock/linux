@@ -87,6 +87,8 @@ static DEFINE_MUTEX(loop_index_mutex);
 static int max_part;
 static int part_shift;
 
+static int HB_MFILE;
+
 static int transfer_xor(struct loop_device *lo, int cmd,
 			struct page *raw_page, unsigned raw_off,
 			struct page *loop_page, unsigned loop_off,
@@ -165,7 +167,7 @@ static loff_t get_loop_size(struct loop_device *lo, struct file *file)
 	return get_size(lo->lo_offset, lo->lo_sizelimit, file);
 }
 
-
+//defined for future disable dio
 static void __loop_disable_dio(struct loop_device *lo)
 {
 
@@ -174,10 +176,7 @@ static void __loop_disable_dio(struct loop_device *lo)
 	blk_queue_flag_set(QUEUE_FLAG_NOMERGES, lo->lo_queue);
 	lo->lo_flags &= ~LO_FLAGS_DIRECT_IO;
 	blk_mq_unfreeze_queue(lo->lo_queue);
-
 }
-
-
 
 
 static void __loop_update_dio(struct loop_device *lo, bool dio)
@@ -438,6 +437,38 @@ static int lo_read_simple(struct loop_device *lo, struct request *rq,
 	return 0;
 }
 
+//note that no write for lsmt
+size_t lsmt_iter_pread(struct lsmt_ro_file *file, 
+	struct iov_iter * iter, loff_t *ppos, int type)
+{
+
+	ssize_t ret = 0;
+	ASSERT(type == 0);
+	while (iov_iter_count(iter)) {
+		struct iovec iovec = iov_iter_iovec(iter);
+		ssize_t nr;
+
+		//read is 0 write is 1
+		nr = lsmt_pread(file, iovec.iov_base, iovec.iov_len, *ppos);
+		//lsmt_pread(ro, p, ALIGNMENT, o + i * ALIGNMENT);   
+
+		if (nr < 0) {
+			if (!ret)
+				ret = nr;
+			break;
+		}
+		ret += nr;
+		if (nr != iovec.iov_len)
+			break;
+		iov_iter_advance(iter, nr);
+	}
+
+	return ret;
+
+
+}
+
+
 static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 		loff_t pos)
 {
@@ -449,12 +480,10 @@ static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 	rq_for_each_segment(bvec, rq, iter) {
 		//init iov_iter i with bvec, length is bvec.bv_len
 		iov_iter_bvec(&i, ITER_BVEC, &bvec, 1, bvec.bv_len);
-		//break here to see the parameters to vfs_iter_read
-		//dump stack and see if we can find out who initiated this read 
 		PRINT_INFO("Before vfs_iter_read, pos is %lx",pos);
-
-		BUG_ON(1);
-		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
+		//BUG_ON(1);
+		len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
+//		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
 		if (len < 0)
 			return len;
 
@@ -1518,7 +1547,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_blocksize(bdev,PAGE_SIZE);
 
-	pr_info("HERE");
+	pr_info("Finishing loop_set_fd_mfile\n");
 	lo->lo_state = Lo_bound;
 	if (part_shift)
 		lo->lo_flags |= LO_FLAGS_PARTSCAN;
@@ -2131,29 +2160,24 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 	pr_info("filenames[%lu] = %s\n", 0, info64.mfile.filenames[0]);
 	#endif
 
-
-//	BUG_ON(1);
 	uint64_t **tgts = kvmalloc(sizeof(char *)*n,GFP_KERNEL);
-	
 	for(i=0; i<n; i++){
-
-	pr_info("here\n");
+		pr_info("here\n");
 		//if(copy_from_user(tgt[i], fns + i*sizeof(char *), sizeof(char *))){
 		if(copy_from_user(tgts + i*sizeof(char *), fns + i*sizeof(char *), sizeof(char *))){
 			pr_info("failed to copy pointer from user with i = %lu\n",i);
 			BUG_ON(1);
 		}	
 
-	pr_info("tgts is %lx\n", tgts[i]);//U
-	//pr_info("tgts points to %lx\n", *tgts[i]);//U
-	pr_info("here\n");
+		pr_info("tgts is %llu\n", tgts[i]);//U
+		//pr_info("tgts points to %lx\n", *tgts[i]);//U
+		pr_info("here\n");
 		if(copy_from_user(info64.mfile.filenames[i], tgts[i], LO_NAME_SIZE))
 		{
 			pr_info("failed to copy from user with i = %lu\n",i);
 			BUG_ON(1);
 
 		}
-		
 		pr_info("filenames[%lu] = %s\n", i, info64.mfile.filenames[i]);
 	}	
 	kvfree(tgts);
@@ -2277,6 +2301,7 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		err = loop_set_fd(lo, mode, bdev, arg);
 		break;
 	case LOOP_SET_FD_MFILE:
+		HB_MFILE=1;
 		pr_info("here am i \n");
 		err = loop_set_fd_mfile(lo, mode, bdev, (struct loop_mfile_fds __user *)arg);
 		break;
@@ -2669,8 +2694,11 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 		goto failed;
 	}
 
-	//ret = do_req_filebacked(lo, rq);
-	ret = do_req_filebacked_mfile(lo, rq);
+	if(HB_MFILE==1){
+		ret = do_req_filebacked_mfile(lo, rq);
+	} else {
+		ret = do_req_filebacked(lo, rq);
+	}
 	
  failed:
 	/* complete non-aio request */
@@ -2949,7 +2977,7 @@ static int __init loop_init(void)
 	unsigned long range;
 	struct loop_device *lo;
 	int err;
-
+	HB_MFILE=0;
 	part_shift = 0;
 	if (max_part > 0) {
 		part_shift = fls(max_part);
