@@ -687,6 +687,8 @@ static int lo_req_flush_mfile(struct loop_device *lo, struct request *rq)
 
 static void lo_complete_rq(struct request *rq)
 {
+	dump_stack();
+	BUG_ON(1);
 	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
 	blk_status_t ret = BLK_STS_OK;
 

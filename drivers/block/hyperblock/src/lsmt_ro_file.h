@@ -24,16 +24,12 @@
 
 #define ASSERT(exp)						\
 	assert(exp)
-	
 #else
-
 #include <linux/err.h>
 #include <linux/printk.h>
-
 #define PRINT_INFO(fmt, ...)                                     \
 	do { if ((1)) \
 	printk(KERN_INFO fmt, ## __VA_ARGS__);} while (0)
-
 #define PRINT_ERROR(fmt, ...)                                          \
 	do { if ((1)) \
 	printk(KERN_ERR fmt, ## __VA_ARGS__);} while (0)
@@ -41,9 +37,10 @@
 //	assert(exp)
 #define ASSERT(x)                                                       \
 do {    if (x) break;                                                   \
-        printk(KERN_EMERG "### ASSERTION FAILED %s: %s: %d: %s\n",      \
-               __FILE__, __func__, __LINE__, #x); dump_stack(); BUG();  \
+	BUG_ON(1);							\
 } while (0)
+
+
 
 #endif
 
