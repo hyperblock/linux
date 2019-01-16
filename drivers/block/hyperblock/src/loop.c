@@ -441,15 +441,18 @@ static int lo_read_simple(struct loop_device *lo, struct request *rq,
 size_t lsmt_iter_pread(struct lsmt_ro_file *file, 
 	struct iov_iter * iter, loff_t *ppos, int type)
 {
-
 	ssize_t ret = 0;
-	ASSERT(type == 0);
+	ASSERT(type == 0);//only do read
 	while (iov_iter_count(iter)) {
 		struct iovec iovec = iov_iter_iovec(iter);
 		ssize_t nr;
 
+		PRINT_INFO("lsmt_ro_file->m_vsize is %llu\n",file->m_vsize);
+		PRINT_INFO("iovec.iov_base is iovec.iov_len is \n",iovec.iov_base,iovec.iov_len);
+
 		//read is 0 write is 1
 		nr = lsmt_pread(file, iovec.iov_base, iovec.iov_len, *ppos);
+		BUG_ON(1);
 		//lsmt_pread(ro, p, ALIGNMENT, o + i * ALIGNMENT);   
 
 		if (nr < 0) {
@@ -480,9 +483,11 @@ static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 	rq_for_each_segment(bvec, rq, iter) {
 		//init iov_iter i with bvec, length is bvec.bv_len
 		iov_iter_bvec(&i, ITER_BVEC, &bvec, 1, bvec.bv_len);
-		PRINT_INFO("Before vfs_iter_read, pos is %lx",pos);
-		//BUG_ON(1);
+		PRINT_INFO("Before lsmt_iter_pread, pos is %lx",pos);
 		len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
+		PRINT_INFO("After lsmt_iter_pread, len is %llu",len);
+		BUG_ON(1);
+		
 //		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
 		if (len < 0)
 			return len;
@@ -559,6 +564,7 @@ out_free_page:
 static int lo_read_transfer_mfile(struct loop_device *lo, struct request *rq,
 		loff_t pos)
 {
+	BUG_ON(1);
 	struct bio_vec bvec, b;
 	struct req_iterator iter;
 	struct iov_iter i;
