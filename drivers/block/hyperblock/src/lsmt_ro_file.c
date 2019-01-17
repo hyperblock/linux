@@ -130,6 +130,8 @@ static bool verify_mapping_moffset(
 void forward_offset_to(void *m, uint64_t x, int8_t type)
 {
         struct segment *s = (struct segment *)m;
+	print_segment(s);
+	PRINT_INFO("x is %llu\n",x);
         ASSERT(x >= s->offset);
         uint64_t delta = x - s->offset;
         s->offset = x;
@@ -158,6 +160,9 @@ static void trim_edge(void *m,
                       uint8_t type)
 {
         if (((struct segment *)m)->offset < bound_segment->offset) {
+		print_segment((struct segment *)m);
+		PRINT_INFO("From trim_edge to forward_offset_to\n");
+		PRINT_INFO("bound_segment->offset is %llu\n",bound_segment->offset);
                 forward_offset_to(m, bound_segment->offset, type);
         }
         if (segment_end(m) >
@@ -747,6 +752,7 @@ size_t lsmt_pread(struct lsmt_ro_file *file,
                         if (mapping[i].zeroed == 0){
                                 read = _lsmt_pread(fd, data, size, 
                                                 mapping[i].moffset * ALIGNMENT);
+				BUG_ON(1);
                                 if (read < size) {
 #ifndef __KERNEL__
 					PRINT_ERROR("read %d-th file error."\

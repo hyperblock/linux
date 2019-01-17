@@ -24,21 +24,24 @@
 
 #define ASSERT(exp)						\
 	assert(exp)
-	
 #else
-
 #include <linux/err.h>
 #include <linux/printk.h>
-
 #define PRINT_INFO(fmt, ...)                                     \
 	do { if ((1)) \
 	printk(KERN_INFO fmt, ## __VA_ARGS__);} while (0)
-
 #define PRINT_ERROR(fmt, ...)                                          \
 	do { if ((1)) \
 	printk(KERN_ERR fmt, ## __VA_ARGS__);} while (0)
-#define ASSERT(exp)						\
-	BUG_ON(exp)
+//#define ASSERT(exp)						\
+//	assert(exp)
+#define ASSERT(x)                                                       \
+do {    if (x) break;                                                   \
+	BUG_ON(1);							\
+} while (0)
+
+
+
 #endif
 
 
@@ -58,7 +61,7 @@
 struct segment {                             /* 8 bytes */
         uint64_t offset : 50; // offset (0.5 PB if in sector)
         uint32_t length : 14; // length (8MB if in sector)
-} /* __attribute__((packed)); */;
+}__attribute__((packed));
 
 struct segment_mapping {                             /* 8 + 8 bytes */
         uint64_t offset : 50; // offset (0.5 PB if in sector)
