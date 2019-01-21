@@ -132,6 +132,12 @@ PHONY += kvmconfig
 kvmconfig: kvm_guest.config
 	@:
 
+
+PHONY += testingconfig
+testingconfig: testing.config
+       @:
+
+
 PHONY += xenconfig
 xenconfig: xen.config
 	@:

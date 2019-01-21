@@ -752,7 +752,6 @@ size_t lsmt_pread(struct lsmt_ro_file *file,
                         if (mapping[i].zeroed == 0){
                                 read = _lsmt_pread(fd, data, size, 
                                                 mapping[i].moffset * ALIGNMENT);
-				BUG_ON(1);
                                 if (read < size) {
 #ifndef __KERNEL__
 					PRINT_ERROR("read %d-th file error."\
