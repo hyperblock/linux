@@ -448,11 +448,10 @@ size_t lsmt_iter_pread(struct lsmt_ro_file *file,
 		ssize_t nr;
 
 		PRINT_INFO("lsmt_ro_file->m_vsize is %llu\n",file->m_vsize);
-		PRINT_INFO("iovec.iov_base is iovec.iov_len is \n",iovec.iov_base,iovec.iov_len);
+		PRINT_INFO("iovec.iov_base is %llu, iovec.iov_len is %llu\n",iovec.iov_base,iovec.iov_len);
 
 		//read is 0 write is 1
 		nr = lsmt_pread(file, iovec.iov_base, iovec.iov_len, *ppos);
-		BUG_ON(1);
 		//lsmt_pread(ro, p, ALIGNMENT, o + i * ALIGNMENT);   
 
 		if (nr < 0) {
@@ -486,7 +485,6 @@ static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 		PRINT_INFO("Before lsmt_iter_pread, pos is %lx",pos);
 		len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
 		PRINT_INFO("After lsmt_iter_pread, len is %llu",len);
-		BUG_ON(1);
 		
 //		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
 		if (len < 0)
@@ -693,8 +691,8 @@ static int lo_req_flush_mfile(struct loop_device *lo, struct request *rq)
 
 static void lo_complete_rq(struct request *rq)
 {
-	dump_stack();
-	BUG_ON(1);
+	//dump_stack();
+	//BUG_ON(1);
 	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
 	blk_status_t ret = BLK_STS_OK;
 
@@ -1387,12 +1385,13 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 	return error;
 }
 
-#if 0
-static void loop_destroy_lsmtfile(struct loop_device *lo)
+#if  1
+static int loop_destroy_lsmtfile(struct loop_device *lo)
 {
-
+//no need for free m_files since we have done it in loop_clr_fd_mfile 
 	struct lsmt_ro_file *ro = lo->lo_lsmt_ro_file;
-	close_file(&ro);
+	kvfree(ro);
+	return 0;
 }
 #endif
 
@@ -1792,6 +1791,7 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 		fput(filps[i]);
 	}
 	kvfree(filps);
+	loop_destroy_lsmtfile(lo);
 	return 0;
 }
 
@@ -2697,15 +2697,18 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 	const bool write = op_is_write(req_op(rq));
 	struct loop_device *lo = rq->q->queuedata;
 	int ret = 0;
-
+	PRINT_INFO("IN LOOP_HANDLE_CMD\n");
 	if (write && (lo->lo_flags & LO_FLAGS_READ_ONLY)) {
+		PRINT_INFO("writing a read only loop\n");
 		ret = -EIO;
 		goto failed;
 	}
 
 	if(HB_MFILE==1){
+		PRINT_INFO("handling reqs with  mfile\n");
 		ret = do_req_filebacked_mfile(lo, rq);
 	} else {
+		PRINT_INFO("handling reqs\n");
 		ret = do_req_filebacked(lo, rq);
 	}
 	
