@@ -87,7 +87,6 @@ static DEFINE_MUTEX(loop_index_mutex);
 static int max_part;
 static int part_shift;
 
-static int HB_MFILE;
 
 static int transfer_xor(struct loop_device *lo, int cmd,
 			struct page *raw_page, unsigned raw_off,
@@ -257,6 +256,30 @@ figure_loop_size(struct loop_device *lo, loff_t offset, loff_t sizelimit)
 	kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
 	return 0;
 }
+
+static int
+figure_loop_size_mfile(struct loop_device *lo, loff_t offset, loff_t sizelimit)
+{
+	//loff_t size = get_size(offset, sizelimit, lo->lo_backing_file);
+	loff_t size = (lo->lo_lsmt_ro_file->m_vsize)>>9;
+
+
+	sector_t x = (sector_t)size;
+	struct block_device *bdev = lo->lo_device;
+
+	if (unlikely((loff_t)x != size))
+		return -EFBIG;
+	if (lo->lo_offset != offset)
+		lo->lo_offset = offset;
+	if (lo->lo_sizelimit != sizelimit)
+		lo->lo_sizelimit = sizelimit;
+	set_capacity(lo->lo_disk, x);
+	bd_set_size(bdev, (loff_t)get_capacity(bdev->bd_disk) << 9);
+	/* let user-space know about the new size */
+	kobject_uevent(&disk_to_dev(bdev->bd_disk)->kobj, KOBJ_CHANGE);
+	return 0;
+}
+
 
 static inline int
 lo_do_transfer(struct loop_device *lo, int cmd,
@@ -708,6 +731,7 @@ static void lo_complete_rq(struct request *rq)
 	 * retry it. If we got no data, end the rest with EIO.
 	 */
 	if (cmd->ret) {
+		
 		blk_update_request(rq, BLK_STS_OK, cmd->ret);
 		cmd->ret = 0;
 		blk_mq_requeue_request(rq, true);
@@ -734,6 +758,7 @@ static void lo_rw_aio_do_completion(struct loop_cmd *cmd)
 		return;
 	kfree(cmd->bvec);
 	cmd->bvec = NULL;
+	PRINT_INFO("now call blk_mq_complete_request\n");
 	blk_mq_complete_request(rq);
 }
 
@@ -1346,6 +1371,7 @@ static int loop_set_fd(struct loop_device *lo, fmode_t mode,
 	lo->lo_device = bdev;
 	lo->lo_flags = lo_flags;
 	lo->lo_backing_file = file;
+	lo->lo_lsmt_ro_file = NULL;
 	lo->transfer = NULL;
 	lo->ioctl = NULL;
 	lo->lo_sizelimit = 0;
@@ -1492,17 +1518,14 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	struct address_space 	*mapping;
 	size_t		n = 0;
 
-
-	pr_info("kern\n");
+	PRINT_INFO("now we do loop_init_lsmtfile\n");
 	lsmtfile = loop_init_lsmtfile(lo, arg);
 	error = -EBADF;
 	if(lsmtfile==NULL) goto out;
 	lo->lo_lsmt_ro_file = lsmtfile;
 
 	n = lsmtfile->m_files_count;
-	pr_info(" Before alloc mfile alloc %lu files\n",n);
 	loop_alloc_mfile(&lo->mfile,n);
-	pr_info(" After alloc mfile\n");
 
 	/* This is safe, since we have a reference from open(). */
 	__module_get(THIS_MODULE);
@@ -1527,7 +1550,6 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_device_ro(bdev, (lo_flags & LO_FLAGS_READ_ONLY) != 0);
 
-	pr_info("HERE");
 	lo->use_dio = false;
 	lo->lo_device = bdev;
 	lo->lo_flags = lo_flags;
@@ -1544,7 +1566,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	if (!(lo_flags & LO_FLAGS_READ_ONLY) && ((struct file *)lsmtfile->m_files[0])->f_op->fsync)
 		blk_queue_write_cache(lo->lo_queue, true, false);
 
-	pr_info("HERE");
+
 //	loop_update_dio(lo);
 	set_capacity(lo->lo_disk, size);
 	bd_set_size(bdev, size << 9);
@@ -1554,7 +1576,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_blocksize(bdev,PAGE_SIZE);
 
-	pr_info("Finishing loop_set_fd_mfile\n");
+	PRINT_INFO("Finishing loop_set_fd_mfile\n");
 	lo->lo_state = Lo_bound;
 	if (part_shift)
 		lo->lo_flags |= LO_FLAGS_PARTSCAN;
@@ -1930,24 +1952,18 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 
 	if (lo->lo_offset != info->lo_offset ||
 	    lo->lo_sizelimit != info->lo_sizelimit) {
-		if (figure_loop_size(lo, info->lo_offset, info->lo_sizelimit)) {
+		if (figure_loop_size_mfile(lo, info->lo_offset, info->lo_sizelimit)) {
 			err = -EFBIG;
 			goto exit;
 		}
 	}
 
-	pr_info("here\n");
 	loop_config_discard_mfile(lo);
-	pr_info("here\n");
 
 	loop_copy_mfile(&info->mfile,&lo->mfile);
-	pr_info("here\n");
 	loop_free_mfile(&info->mfile,lo->mfile.mfcnt);
-	pr_info("here\n");
 	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
-	pr_info("here\n");
 	memcpy(lo->lo_crypt_name, info->lo_crypt_name, LO_NAME_SIZE);
-	pr_info("here\n");
 	lo->lo_file_name[LO_NAME_SIZE-1] = 0;
 	lo->lo_crypt_name[LO_NAME_SIZE-1] = 0;
 
@@ -2310,7 +2326,6 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		err = loop_set_fd(lo, mode, bdev, arg);
 		break;
 	case LOOP_SET_FD_MFILE:
-		HB_MFILE=1;
 		pr_info("here am i \n");
 		err = loop_set_fd_mfile(lo, mode, bdev, (struct loop_mfile_fds __user *)arg);
 		break;
@@ -2704,9 +2719,10 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 		goto failed;
 	}
 
-	if(HB_MFILE==1){
+	if(lo->lo_lsmt_ro_file!=NULL){
 		PRINT_INFO("handling reqs with  mfile\n");
 		ret = do_req_filebacked_mfile(lo, rq);
+		pr_info("ret is %d\n",ret);
 	} else {
 		PRINT_INFO("handling reqs\n");
 		ret = do_req_filebacked(lo, rq);
@@ -2716,6 +2732,7 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 	/* complete non-aio request */
 	if (!cmd->use_aio || ret) {
 		cmd->ret = ret ? -EIO : 0;
+		PRINT_INFO("now call blk_mq_complete_request\n");
 		blk_mq_complete_request(rq);
 	}
 }
@@ -2989,7 +3006,7 @@ static int __init loop_init(void)
 	unsigned long range;
 	struct loop_device *lo;
 	int err;
-	HB_MFILE=0;
+
 	part_shift = 0;
 	if (max_part > 0) {
 		part_shift = fls(max_part);
