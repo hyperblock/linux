@@ -720,8 +720,8 @@ static void lo_complete_rq(struct request *rq)
 	blk_status_t ret = BLK_STS_OK;
 
 	pr_info("cmd->ret is %d\n",cmd->ret);
-	pr_info("blk_rq_bytes is %lu\n",blk_rq_bytes(rq));
-	pr_info("cmd->use_aio is %d\n ",cmd->use_aio);
+	pr_info("blk_rq_bytes is ")
+
 	if (!cmd->use_aio || cmd->ret < 0 || cmd->ret == blk_rq_bytes(rq) ||
 	    req_op(rq) != REQ_OP_READ) {
 		if (cmd->ret < 0)
