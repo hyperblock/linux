@@ -1564,7 +1564,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	lo->lo_sizelimit = 0;
 	lo->old_gfp_mask = mapping_gfp_mask(mapping);
 	// we do not disable io and vfs ops
-	//mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
+	mapping_set_gfp_mask(mapping, lo->old_gfp_mask & ~(__GFP_IO|__GFP_FS));
 
 	if (!(lo_flags & LO_FLAGS_READ_ONLY) && ((struct file *)lsmtfile->m_files[0])->f_op->fsync)
 		blk_queue_write_cache(lo->lo_queue, true, false);
