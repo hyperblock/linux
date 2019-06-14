@@ -477,8 +477,8 @@ size_t lsmt_iter_pread(struct lsmt_ro_file *file,
 		struct iovec iovec = iov_iter_iovec(iter);
 		ssize_t nr;
 
-		PRINT_INFO("lsmt_ro_file->m_vsize is %llu\n",file->m_vsize);
-		PRINT_INFO("iovec.iov_base is %llu, iovec.iov_len is %llu\n",iovec.iov_base,iovec.iov_len);
+		pr_info("lsmt_ro_file->m_vsize is %llu\n",file->m_vsize);
+		pr_info("iovec.iov_base is %llu, iovec.iov_len is %llu\n",iovec.iov_base,iovec.iov_len);
 
 		//read is 0 write is 1
 		nr = lsmt_pread(file, iovec.iov_base, iovec.iov_len, *ppos);
@@ -512,10 +512,10 @@ static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 	rq_for_each_segment(bvec, rq, iter) {
 		//init iov_iter i with bvec, length is bvec.bv_len
 		iov_iter_bvec(&i, ITER_BVEC, &bvec, 1, bvec.bv_len);
-		PRINT_INFO("Before lsmt_iter_pread, pos is %lx",pos);
+		pr_info("Before lsmt_iter_pread, pos is %lx",pos);
 		//len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
 		len = lsmt_iter_read(lo->lo_lsmt_ro_file, &i, &pos,0);
-		PRINT_INFO("After lsmt_iter_pread, len is %llu",len);
+		pr_info("After lsmt_iter_pread, len is %llu",len);
 		
 //		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
 		if (len < 0)
@@ -724,6 +724,8 @@ static void lo_complete_rq(struct request *rq)
 {
 	//dump_stack();
 	//BUG_ON(1);
+	
+	pr_info("##########################in loop_complete_req request is %lx\n ",rq);
 	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
 	blk_status_t ret = BLK_STS_OK;
 
@@ -769,7 +771,7 @@ static void lo_rw_aio_do_completion(struct loop_cmd *cmd)
 		return;
 	kfree(cmd->bvec);
 	cmd->bvec = NULL;
-	PRINT_INFO("now call blk_mq_complete_request\n");
+	pr_info("In lo_rw_aio_do_completion...now call blk_mq_complete_request\n");
 	blk_mq_complete_request(rq);
 }
 
@@ -986,24 +988,46 @@ static int do_req_filebacked_mfile(struct loop_device *lo, struct request *rq)
 	 */
 	switch (req_op(rq)) {
 	case REQ_OP_FLUSH:
+		pr_info("Do flush with lo_req_flush_mfile...\n");
 		return lo_req_flush_mfile(lo, rq);
 	case REQ_OP_DISCARD:
 	case REQ_OP_WRITE_ZEROES:
+		pr_info("Do write zeroes with lo_discatd_mfile...\n");
 		return lo_discard_mfile(lo, rq, pos);
 	case REQ_OP_WRITE:
-		if (lo->transfer)
+		pr_info("Do write...\n");
+		if (lo->transfer){
+
+		pr_info("lo_write_transfer_mfile...\n");
 			return lo_write_transfer_mfile(lo, rq, pos);
-		else if (cmd->use_aio)
+		}
+		else if (cmd->use_aio){
+
+		pr_info("lo_rw_aio_mfile write...\n");
 			return lo_rw_aio_mfile(lo, cmd, pos, WRITE);
-		else
+		}
+		else {
+
+		pr_info("lo_write_simple_mfile...\n");
 			return lo_write_simple_mfile(lo, rq, pos);
+		}
 	case REQ_OP_READ:
-		if (lo->transfer)
+		pr_info("Do read...\n");
+		if (lo->transfer){
+
+		pr_info("lo_read_transfer_mfile...\n");
 			return lo_read_transfer_mfile(lo, rq, pos);
-		else if (cmd->use_aio)
+		}
+		else if (cmd->use_aio){
+
+		pr_info("Do lo_rw_aio_mfile read...\n");
 			return lo_rw_aio_mfile(lo, cmd, pos, READ);
-		else
+		}
+		else{
+
+		pr_info("Do lo_read_simple_mfile...\n");
 			return lo_read_simple_mfile(lo, rq, pos);
+		}
 	default:
 		WARN_ON_ONCE(1);
 		return -EIO;
@@ -1469,7 +1493,7 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
 	pr_info("Created lsmt_ro_file object. addr: 0x%lx", (unsigned long)(void *)ro);	
         
         if (ro == NULL) {
-                PRINT_INFO("create lsmt_ro_file object failed, func return.%c",0);
+                pr_info("create lsmt_ro_file object failed, func return.%c",0);
 		//leaving closing file job to userspace losetup
                 return NULL;
         }
@@ -1529,7 +1553,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 	struct address_space 	*mapping;
 	size_t		n = 0;
 
-	PRINT_INFO("now we do loop_init_lsmtfile\n");
+	pr_info("now we do loop_init_lsmtfile\n");
 	lsmtfile = loop_init_lsmtfile(lo, arg);
 	error = -EBADF;
 	if(lsmtfile==NULL) goto out;
@@ -1587,7 +1611,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 
 	set_blocksize(bdev,PAGE_SIZE);
 
-	PRINT_INFO("Finishing loop_set_fd_mfile\n");
+	pr_info("Finishing loop_set_fd_mfile\n");
 	lo->lo_state = Lo_bound;
 	if (part_shift)
 		lo->lo_flags |= LO_FLAGS_PARTSCAN;
@@ -1972,6 +1996,7 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 	loop_config_discard_mfile(lo);
 
 	loop_copy_mfile(&info->mfile,&lo->mfile);
+	//free info
 	loop_free_mfile(&info->mfile,lo->mfile.mfcnt);
 	memcpy(lo->lo_file_name, info->lo_file_name, LO_NAME_SIZE);
 	memcpy(lo->lo_crypt_name, info->lo_crypt_name, LO_NAME_SIZE);
@@ -2685,6 +2710,7 @@ static blk_status_t loop_queue_rq(struct blk_mq_hw_ctx *hctx,
 		const struct blk_mq_queue_data *bd)
 {
 	struct request *rq = bd->rq;
+	pr_info("==================================in loop_queue_rq request is %lx\n ",rq);
 	struct loop_cmd *cmd = blk_mq_rq_to_pdu(rq);
 	struct loop_device *lo = rq->q->queuedata;
 
@@ -2723,19 +2749,18 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 	const bool write = op_is_write(req_op(rq));
 	struct loop_device *lo = rq->q->queuedata;
 	int ret = 0;
-	PRINT_INFO("IN LOOP_HANDLE_CMD\n");
 	if (write && (lo->lo_flags & LO_FLAGS_READ_ONLY)) {
-		PRINT_INFO("writing a read only loop\n");
+		pr_info("writing a read only loop\n");
 		ret = -EIO;
 		goto failed;
 	}
 
 	if(lo->lo_lsmt_ro_file!=NULL){
-		PRINT_INFO("handling reqs with  mfile\n");
+		pr_info("handling reqs with  mfile\n");
 		ret = do_req_filebacked_mfile(lo, rq);
-		pr_info("ret is %d\n",ret);
+		pr_info("ret of do_req_filebacked_mfile is %d\n",ret);
 	} else {
-		PRINT_INFO("handling reqs\n");
+		pr_info("handling reqs\n");
 		ret = do_req_filebacked(lo, rq);
 	}
 	
@@ -2743,7 +2768,7 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 	/* complete non-aio request */
 	if (!cmd->use_aio || ret) {
 		cmd->ret = ret ? -EIO : 0;
-		PRINT_INFO("now call blk_mq_complete_request\n");
+		pr_info("In loop_handle_cmd failed now call blk_mq_complete_request\n");
 		blk_mq_complete_request(rq);
 	}
 }
