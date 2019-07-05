@@ -707,14 +707,35 @@ error_ret:
         return NULL;
 }
 
+
+#if 0
+size_t lsmt_iter_read(struct lsmt_ro_file *file, 
+	struct iov_iter * iter, loff_t *ppos, int type)
+{
+	//ssize_t ret = 0;
+	struct kiocb kiocb;
+	ssize_t ret;
+
+	init_sync_kiocb(&kiocb, flags);
+	if (ret)
+		return ret;
+	kiocb.ki_pos = *ppos;
+
+	if(type==READ)
+
+
+}
+#endif
+
+//this function peers to vfs_iter_read
 size_t lsmt_iter_read(struct lsmt_ro_file *file, 
 	struct iov_iter * iter, loff_t *ppos, int type)
 {
 	ssize_t ret = 0;
 	ASSERT(type == 0);//only do read
-//iov_iter from loop --> buf and offset in lsmt --> iov_iter to use in vfs_iter_read
-        size_t readn = 0;
-        int NMAPPING = 16;
+//iov_iter from loop device --> buf and offset in lsmt --> iov_iter to use in vfs_iter_read
+    	size_t readn = 0;
+    	int NMAPPING = 16;
 	char *data = NULL;
 	size_t nbytes = 0;
 	if(uaccess_kernel()){
@@ -726,6 +747,10 @@ size_t lsmt_iter_read(struct lsmt_ro_file *file,
 		data = iter->iov->iov_base;
 		nbytes = iter->iov->iov_len;	
 	}
+
+
+	pr_info("initial pos is %x, size is ",*ppos);
+
 	off_t offset = *ppos; 
         struct segment_mapping mapping[NMAPPING];
 	struct segment s = { (uint64_t)offset / ALIGNMENT, (uint32_t)nbytes / ALIGNMENT };
@@ -751,6 +776,7 @@ size_t lsmt_iter_read(struct lsmt_ro_file *file,
 			//init with new iov 
 			iov_iter_init(iter, READ, &iov, 1, size);	
                         if (mapping[i].zeroed == 0){
+				pr_info("Before do vfs_iter_read pos is %x, size is %x",pos,size);
 				read = vfs_iter_read(fd, iter, &pos,0);
                                 if (read < size) {
 #ifndef __KERNEL__

@@ -515,6 +515,9 @@ static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 		pr_info("Before lsmt_iter_pread, pos is %lx",pos);
 		//len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
 		len = lsmt_iter_read(lo->lo_lsmt_ro_file, &i, &pos,0);
+
+		//len = vfs_iter_read(lo->lo_backing_files[0], &i, &pos, 0);
+
 		pr_info("After lsmt_iter_pread, len is %llu",len);
 		
 //		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);

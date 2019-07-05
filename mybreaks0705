@@ -1,0 +1,8 @@
+break generic_file_buffered_read
+break lo_read_simple
+  commands
+    silent
+    enable 1
+    continue
+  end
+break /home/zgl/vagrant/hyperblock_loop/mm/filemap.c:2088
