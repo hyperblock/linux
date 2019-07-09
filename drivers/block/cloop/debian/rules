@@ -1,0 +1,31 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+DPKG_EXPORT_BUILDFLAGS = 1
+include /usr/share/dpkg/buildflags.mk
+include /usr/share/dpkg/architecture.mk
+CFLAGS += -flto
+CXXFLAGS += -flto
+LDFLAGS += -flto
+
+XDIR=debian/cloop-src/usr/src/modules/cloop
+
+%:
+	dh $@ --parallel --with autotools_dev
+
+override_dh_auto_configure:
+	cd advancecomp-1.15 && ./configure --host=$(DEB_HOST_GNU_TYPE) --build=$(DEB_BUILD_GNU_TYPE)
+
+# compile just the tools, not the kernel module
+override_dh_auto_build:
+	dh_auto_build -- extract_compressed_fs
+	dh_auto_build -- -C advancecomp-1.15 advfs
+	dh_auto_build -- extract_compressed_fs create_compressed_fs
+
+override_dh_auto_install:
+	install -d $(XDIR)/debian debian/cloop-utils/usr/bin debian/cloop-utils/usr/share/doc/cloop-utils
+	install -m 755 create_compressed_fs extract_compressed_fs  debian/cloop-utils/usr/bin/
+	cp Makefile *.c *.h README ChangeLog $(XDIR)
+	cd debian && install rules.m-a ../$(XDIR)/debian/rules && cp -r po compat control* copyright *_KVERS_* README.Debian changelog ../$(XDIR)/debian
+	dh_fixperms -i -Xrules
+	cd debian/cloop-src/usr/src && XZ_OPT=-9 tar --xz -c -f cloop.tar.xz modules && rm -rf modules
