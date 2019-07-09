@@ -2759,9 +2759,9 @@ static void loop_handle_cmd(struct loop_cmd *cmd)
 	}
 
 	if(lo->lo_lsmt_ro_file!=NULL){
-		pr_info("handling reqs with  mfile\n");
+		pr_info("---handling reqs %lx  with  mfile\n", rq);
 		ret = do_req_filebacked_mfile(lo, rq);
-		pr_info("ret of do_req_filebacked_mfile is %d\n",ret);
+		pr_info("---ret of do_req_filebacked_mfile is %d\n",ret);
 	} else {
 		pr_info("handling reqs\n");
 		ret = do_req_filebacked(lo, rq);

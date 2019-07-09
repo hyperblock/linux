@@ -1,0 +1,25 @@
+break generic_file_buffered_read
+disable $bpnum
+break lo_read_simple
+  commands
+    silent
+    enable 1
+    continue
+  end
+break /home/zgl/vagrant/hyperblock_loop/mm/filemap.c:2088
+disable $bpnum
+break lo_complete_rq
+  commands
+    silent
+    enable 6
+    continue
+  end
+break lo_read_simple_mfile
+  commands
+    silent
+    enable 1
+    enable 3
+    continue
+  end
+break page_endio
+disable $bpnum
