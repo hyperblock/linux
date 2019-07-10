@@ -18,14 +18,14 @@
 #include <inttypes.h>
 
 #ifndef be64toh
-static __inline __uint64_t
+	static __inline __uint64_t
 __bswap64(__uint64_t _x)
 {
 
 	return ((_x >> 56) | ((_x >> 40) & 0xff00) | ((_x >> 24) & 0xff0000) |
-	    ((_x >> 8) & 0xff000000) | ((_x << 8) & ((__uint64_t)0xff << 32)) |
-	    ((_x << 24) & ((__uint64_t)0xff << 40)) |
-	    ((_x << 40) & ((__uint64_t)0xff << 48)) | ((_x << 56)));
+			((_x >> 8) & 0xff000000) | ((_x << 8) & ((__uint64_t)0xff << 32)) |
+			((_x << 24) & ((__uint64_t)0xff << 40)) |
+			((_x << 40) & ((__uint64_t)0xff << 48)) | ((_x << 56)));
 }
 #if BYTE_ORDER == LITTLE_ENDIAN
 #define be64toh(x)	__bswap64(x)
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 {
 	int handle, output;
 	unsigned int i, total_blocks, total_offsets, offsets_size,
-	    compressed_buffer_size, uncompressed_buffer_size;
+		     compressed_buffer_size, uncompressed_buffer_size;
 	struct cloop_head head;
 	unsigned char *compressed_buffer, *uncompressed_buffer;
 	loff_t *offsets;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	if(!strcmp(argv[2],"-")) output = STDOUT_FILENO;
 	else {
 		output = open(argv[2], O_CREAT|O_WRONLY|O_LARGEFILE,
-		                       S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
+				S_IRUSR|S_IWUSR|S_IRGRP|S_IROTH);
 		if (output < 0) {
 			perror("Opening uncompressed output file\n");
 			exit(1);
@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
 	uncompressed_buffer_size = ntohl(head.block_size);
 
 	fprintf(stderr, "%s: compressed input has %u blocks of size %u.\n",
-		argv[0], total_blocks, uncompressed_buffer_size);
+			argv[0], total_blocks, uncompressed_buffer_size);
 
 
 	/* The maximum size of a compressed block, due to the
@@ -131,80 +131,80 @@ int main(int argc, char *argv[])
 		fprintf(stderr, " (%d bytes).\n", offsets_size);
 		exit(1);
 	}
-	
+
 	for (i = 0, compressed_bytes=0, uncompressed_bytes=0, block_modulo = total_blocks / 10;
-	     i < total_blocks;
-	     i++) {
-                int size = __be64_to_cpu(offsets[i+1]) - __be64_to_cpu(offsets[i]);
+			i < total_blocks;
+			i++) {
+		int size = __be64_to_cpu(offsets[i+1]) - __be64_to_cpu(offsets[i]);
 		uLongf destlen = uncompressed_buffer_size;
 		if (size < 0 || size > compressed_buffer_size) {
 			fprintf(stderr, 
-				"%s: Size %d for block %u (offset %" PRIu64 ") wrong, corrupt data!\n",
-				argv[0], size, i, (uint64_t) __be64_to_cpu(offsets[i]));
+					"%s: Size %d for block %u (offset %" PRIu64 ") wrong, corrupt data!\n",
+					argv[0], size, i, (uint64_t) __be64_to_cpu(offsets[i]));
 			exit(1);
 		}
 		if(read(handle, compressed_buffer, size) != size) {
 			perror("Reading block");
 			fprintf(stderr, " %u (offset %" PRIu64 ") of size %d.\n", i,
-			     (uint64_t) __be64_to_cpu(offsets[i]), size);
+					(uint64_t) __be64_to_cpu(offsets[i]), size);
 			exit(1);
 		}
 
 #if 0 /* DEBUG */
 		if (i == 3) {
 			fprintf(stderr,
-				"Block head:%02X%02X%02X%02X%02X%02X%02X%02X\n",
-				buffer[0],
-				buffer[1],
-				buffer[2],
-				buffer[3],
-				buffer[4],
-				buffer[5],
-				buffer[6],
-				buffer[7]);
+					"Block head:%02X%02X%02X%02X%02X%02X%02X%02X\n",
+					buffer[0],
+					buffer[1],
+					buffer[2],
+					buffer[3],
+					buffer[4],
+					buffer[5],
+					buffer[6],
+					buffer[7]);
 			fprintf(stderr,
-				"Block tail:%02X%02X%02X%02X%02X%02X%02X%02X\n",
-				buffer[3063],
-				buffer[3064],
-				buffer[3065],
-				buffer[3066],
-				buffer[3067],
-				buffer[3068],
-				buffer[3069],
-				buffer[3070]);
+					"Block tail:%02X%02X%02X%02X%02X%02X%02X%02X\n",
+					buffer[3063],
+					buffer[3064],
+					buffer[3065],
+					buffer[3066],
+					buffer[3067],
+					buffer[3068],
+					buffer[3069],
+					buffer[3070]);
 		}
 #endif
 		switch (uncompress(uncompressed_buffer, &destlen,
-				   compressed_buffer, size)) {
+					compressed_buffer, size)) {
 			case Z_OK: break;
 
 			case Z_MEM_ERROR:
-				fprintf(stderr, "Uncomp: oom block %u\n", i);
-				exit(1);
-				break;
+				   fprintf(stderr, "Uncomp: oom block %u\n", i);
+				   exit(1);
+				   break;
 
 			case Z_BUF_ERROR:
-				fprintf(stderr, "Uncomp: not enough out room %u\n", i);
-				exit(1);
-				break;
+				   fprintf(stderr, "Uncomp: not enough out room %u\n", i);
+				   exit(1);
+				   break;
 
 			case Z_DATA_ERROR:
-				fprintf(stderr, "Uncomp: input corrupt %u\n", i);
-				exit(1);
-				break;
+				   fprintf(stderr, "Uncomp: input corrupt %u\n", i);
+				   exit(1);
+				   break;
 
 			default:
-				fprintf(stderr, "Uncomp: unknown error %u\n", i);
-				exit(1);
+				   fprintf(stderr, "Uncomp: unknown error %u\n", i);
+				   exit(1);
 		}
 		compressed_bytes += size; uncompressed_bytes += destlen;
 		if(((i % block_modulo) == 0) || (i == (total_blocks - 1))) {
 			fprintf(stderr, "[Current block: %6u, In: %" PRIu64 "kB, Out: %" PRIu64 "kB, ratio %d%%, complete %3d%%]\n",
-			        i, 
-              (uint64_t) compressed_bytes / 1024L,
-              (uint64_t) uncompressed_bytes / 1024L,
-				(int)((uncompressed_bytes * 100L) / compressed_bytes),
-				(int)(i * 100 / (total_blocks - 1)));
+					i, 
+					(uint64_t) compressed_bytes / 1024L,
+					(uint64_t) uncompressed_bytes / 1024L,
+					(int)((uncompressed_bytes * 100L) / compressed_bytes),
+					(int)(i * 100 / (total_blocks - 1)));
 		}
 		write(output, uncompressed_buffer, destlen);
 		fdatasync(output);

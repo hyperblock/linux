@@ -2,39 +2,39 @@
 #define _COMPRESSED_LOOP_H
 
 /*************************************************************************\
-* Starting with Format V4.0 (cloop version 4.x), cloop can now have two   *
-* alternative structures:                                                 *
-*                                                                         *
-* 1. Header first: "robust" format, handles missing blocks well           *
-* 2. Footer (header last): "streaming" format, easier to create           *
-*                                                                         *
-* The cloop kernel module autodetects both formats, and can (currently)   *
-* still handle the V2.0 format as well.                                   *
-*                                                                         *
-* 1. Header first:                                                        *
-*   +---------------------------- FIXED SIZE ---------------------------+ *
-*   |Signature (128 bytes)                                              | *
-*   |block_size (32bit number, network order)                           | *
-*   |num_blocks (32bit number, network order)                           | *
-*   +--------------------------- VARIABLE SIZE -------------------------+ *
-*   |num_blocks * FlagsOffset (upper 4 bits flags, lower 64 bits offset)| *
-*   |compressed data blocks of variable size ...                        | *
-*   +-------------------------------------------------------------------+ *
-*                                                                         *
-* 2. Footer (header last):                                                *
-*   +--------------------------- VARIABLE SIZE -------------------------+ *
-*   |compressed data blocks of variable size ...                        | *
-*   |num_blocks * FlagsOffset (upper 4 bits flags, lower 64 bits offset)| *
-*   +---------------------------- FIXED SIZE ---------------------------+ *
-*   |Signature (128 bytes)                                              | *
-*   |block_size (32bit number, network order)                           | *
-*   |num_blocks (32bit number, network order)                           | *
-*   +-------------------------------------------------------------------+ *
-*                                                                         *
-* Offsets are always relative to beginning of file, in all formats.       *
-* The block index contains num_blocks+1 offsets, followed (1) or          *
-* preceded (2) by the compressed blocks.                                  *
-\*************************************************************************/
+ * Starting with Format V4.0 (cloop version 4.x), cloop can now have two   *
+ * alternative structures:                                                 *
+ *                                                                         *
+ * 1. Header first: "robust" format, handles missing blocks well           *
+ * 2. Footer (header last): "streaming" format, easier to create           *
+ *                                                                         *
+ * The cloop kernel module autodetects both formats, and can (currently)   *
+ * still handle the V2.0 format as well.                                   *
+ *                                                                         *
+ * 1. Header first:                                                        *
+ *   +---------------------------- FIXED SIZE ---------------------------+ *
+ *   |Signature (128 bytes)                                              | *
+ *   |block_size (32bit number, network order)                           | *
+ *   |num_blocks (32bit number, network order)                           | *
+ *   +--------------------------- VARIABLE SIZE -------------------------+ *
+ *   |num_blocks * FlagsOffset (upper 4 bits flags, lower 64 bits offset)| *
+ *   |compressed data blocks of variable size ...                        | *
+ *   +-------------------------------------------------------------------+ *
+ *                                                                         *
+ * 2. Footer (header last):                                                *
+ *   +--------------------------- VARIABLE SIZE -------------------------+ *
+ *   |compressed data blocks of variable size ...                        | *
+ *   |num_blocks * FlagsOffset (upper 4 bits flags, lower 64 bits offset)| *
+ *   +---------------------------- FIXED SIZE ---------------------------+ *
+ *   |Signature (128 bytes)                                              | *
+ *   |block_size (32bit number, network order)                           | *
+ *   |num_blocks (32bit number, network order)                           | *
+ *   +-------------------------------------------------------------------+ *
+ *                                                                         *
+ * Offsets are always relative to beginning of file, in all formats.       *
+ * The block index contains num_blocks+1 offsets, followed (1) or          *
+ * preceded (2) by the compressed blocks.                                  *
+ \*************************************************************************/
 
 #include <linux/types.h>   /* u_int32_t */
 
@@ -56,14 +56,14 @@ struct cloop_head
 #define CLOOP4_SIGNATURE_OFFSET 0x0b
 
 /************************************************************************\
-*  CLOOP4 flags for each compressed block                                *
-*  Value   Meaning                                                       *
-*    0     GZIP/7ZIP compression (compatible with V2.0 Format)           *
-*    1     no compression (incompressible data)                          *
-*    2     xz compression (currently best space saver)                   *
-*    3     lz4 compression                                               *
-*    4     lzo compression (fastest)                                     *
-\************************************************************************/
+ *  CLOOP4 flags for each compressed block                                *
+ *  Value   Meaning                                                       *
+ *    0     GZIP/7ZIP compression (compatible with V2.0 Format)           *
+ *    1     no compression (incompressible data)                          *
+ *    2     xz compression (currently best space saver)                   *
+ *    3     lz4 compression                                               *
+ *    4     lzo compression (fastest)                                     *
+ \************************************************************************/
 
 typedef uint64_t cloop_block_ptr;
 
