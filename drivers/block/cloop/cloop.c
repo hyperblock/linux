@@ -44,6 +44,16 @@
 #include <asm/div64.h> /* do_div() for 64bit division */
 #include <asm/uaccess.h>
 #include <asm/byteorder.h>
+#include <linux/vfs.h> /* for vfs_read*/
+#include <linux/types.h>
+#include <linux/string.h>
+#include <linux/export.h>
+#include <linux/mm.h>
+#include <linux/uaccess.h>
+#include <linux/version.h>
+
+
+
 /* Check for ZLIB, LZO1X, LZ4 decompression algorithms in kernel. */
 #if (defined(CONFIG_ZLIB_INFLATE) || defined(CONFIG_ZLIB_INFLATE_MODULE))
 #include <linux/zutil.h>
@@ -303,11 +313,14 @@ static ssize_t cloop_read_from_file(struct cloop_device *clo, struct file *f, ch
    size_t size = buf_len - buf_done, size_read;
    /* kernel_read() only supports 32 bit offsets, so we use vfs_read() instead. */
    /* int size_read = kernel_read(f, pos, buf + buf_done, size); */
+#if LINUX_VERSION_CODE <= KERNEL_VERSION(4,14,14)
    mm_segment_t old_fs = get_fs();
    set_fs(get_ds());
    size_read = vfs_read(f, (void __user *)(buf + buf_done), size, &pos);
    set_fs(old_fs);
-
+#else
+   size_read = kernel_read(f, (void __user *)(buf + buf_done), size, &pos);
+#endif
    if(size_read <= 0)
     {
      printk(KERN_ERR "%s: Read error %d at pos %llu in file %s, "

@@ -1,6 +1,8 @@
 #!/usr/bin/make
 
 MACHINE=$(shell uname -m)
+
+KERNEL_DIR:=../../../../hyperblock_loop/
 ifndef KERNEL_DIR
 KERNEL_DIR:=/lib/modules/`uname -r`/build
 endif
