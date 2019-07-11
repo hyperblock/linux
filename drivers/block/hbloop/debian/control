@@ -1,0 +1,22 @@
+Source: hbloop
+Section: misc
+Priority: optional
+Maintainer: Guoliang Zhu  <zhuguoliangcs@gmail.com>
+Build-Depends: debhelper (>> 9), zlib1g-dev, xz-utils, autotools-dev
+Standards-Version: 3.9.6
+
+Package: hbloop-utils
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Tools for handling with hbloop compressed volumes
+ Utilities for creating and unpacking compressed loopback files
+ for hbloop.
+
+Package: hbloop-src
+Architecture: all
+Depends: module-assistant, debhelper (>= 5.0.37), xz-utils, ${misc:Depends}
+Description: Source of the compressed loopback device module
+ This package contains a source package for building the hbloop module.
+ You can use module-assistant or make-kpkg to build a modules package for
+ specific kernel.
+

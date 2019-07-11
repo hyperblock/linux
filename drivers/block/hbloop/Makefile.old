@@ -1,0 +1,51 @@
+#!/usr/bin/make
+
+MACHINE=$(shell uname -m)
+
+KERNEL_DIR:=../../../../hyperblock_loop/
+ifndef KERNEL_DIR
+KERNEL_DIR:=/lib/modules/`uname -r`/build
+endif
+
+file_exist=$(shell test -f $(1) && echo yes || echo no)
+
+# test for 2.6 or 2.4 kernel
+ifeq ($(call file_exist,$(KERNEL_DIR)/Rules.make), yes)
+PATCHLEVEL:=4
+else
+PATCHLEVEL:=6
+endif
+
+KERNOBJ:=hbloop.o
+
+# Name of module
+ifeq ($(PATCHLEVEL),6)
+MODULE:=hbloop.ko
+else
+MODULE:=hbloop.o
+endif
+
+ALL_TARGETS = 
+ifndef APPSONLY
+ALL_TARGETS += $(MODULE)
+endif
+
+all: $(ALL_TARGETS)
+
+module: $(MODULE)
+
+# For Kernel >= 2.6, we now use the "recommended" way to build kernel modules
+obj-m := hbloop.o
+# hbloop-objs := hbloop.o
+
+$(MODULE): hbloop.c hbloop.h
+	@echo "Building for Kernel Patchlevel $(PATCHLEVEL)"
+	$(MAKE) modules -C $(KERNEL_DIR) M=$(CURDIR)
+
+hbloop_ioctls: hbloop_ioctls.o
+	$(CC) $(CFLAGS) $(CLOOP_CFLAGS) $(LDFLAGS) -Wall -O2 -s -o $@ $<
+
+clean:
+	rm -rf  *.o *.ko Module.symvers  .tmp* modules.order *.mod.c
+
+

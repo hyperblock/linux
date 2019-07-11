@@ -29,11 +29,8 @@ umount /mnt/tmp
 echo "-------------------> Making and mounting compressed image <..."
 dd if="$INPUTDEVICE"  bs="$BLOCKSIZE" count="$NUMBLOCKS" | pv -s "$((NUMBLOCKS * BLOCKSIZE))" -Wpetr | create_compressed_fs -L "$COMPRESSIONLEVEL" -B "$CLOOPBLOCKSIZE" -s "$NUMBLOCKS"M - "$OUTPUTFILE" > "$CLOOPLOGFILE" 2>&1
 #insmod /lib/modules/`uname -r`/cloop.ko file="$OUTPUTFILE"
-#insmod ../../../../hyperblock_loop/drivers/block/cloop/cloop.ko file="$OUTPUTFILE"
-insmod ../../../../hyperblock_loop/drivers/block/cloop/cloop.ko 
+insmod ../../../../hyperblock_loop/drivers/block/cloop/cloop.ko file="$OUTPUTFILE"
 mkdir -p /mnt/cloop
-
-losetup /dev/cloop0 $OUTPUTFILE
-#mount -o ro /dev/cloop0 /mnt/cloop
-#ls /mnt/cloop
+mount -o ro /dev/cloop0 /mnt/cloop
+ls /mnt/cloop
 
