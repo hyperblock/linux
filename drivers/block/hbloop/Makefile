@@ -2,7 +2,7 @@
 #hyperblock-y := lsmt_ro_file.o
 #obj-$(CONFIG_BLK_DEV_LOOP) += loop.o
 obj-$(CONFIG_HYPERBLOCK) += hbloop.o 
-loop-objs := src/hbloop.o src/lsmt_ro_file.o
+hbloop-objs := src/hbloop.o src/lsmt_ro_file.o
 #KERNEL_PATH=/root/kernel/hyperblock_loop
 KERNEL_PATH=../../../
 
