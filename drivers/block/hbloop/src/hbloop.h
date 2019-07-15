@@ -1,8 +1,4 @@
 
-
-
-
-
 #define HBLOOP_HEADROOM 128
 /* Header of fixed length, can be located at beginning or end of file   */
 struct hbloop_head

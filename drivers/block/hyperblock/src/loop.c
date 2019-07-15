@@ -501,6 +501,40 @@ size_t lsmt_iter_pread(struct lsmt_ro_file *file,
 }
 
 
+static int lo_read_simple_mfile_try(struct loop_device *lo, struct request *rq,
+		loff_t pos)
+{
+	struct bio_vec bvec;
+	struct req_iterator iter;
+	struct iov_iter i;
+	ssize_t len;
+
+	rq_for_each_segment(bvec, rq, iter) {
+
+                unsigned long length = bvec.bv_len;
+		char *to_ptr      = kmap(bvec.bv_page) + bvec.bv_offset;
+		pr_info("Before lsmt_iter_pread, pos is %lx, bvec.bv_len is %lx ", pos, bvec.bv_len);
+		len = lsmt_pread_try(lo->lo_lsmt_ro_file, to_ptr, length, &pos);	
+		pr_info("After lsmt_iter_pread, pos is %lx",pos);
+		if (len < 0)
+			return len;
+		kunmap(bvec.bv_page);
+
+		if (len != bvec.bv_len) {
+			struct bio *bio;
+
+			__rq_for_each_bio(bio, rq)
+				zero_fill_bio(bio);
+			break;
+		}
+		cond_resched();
+	}
+
+	return 0;
+}
+
+
+
 static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
 		loff_t pos)
 {
@@ -1029,7 +1063,7 @@ static int do_req_filebacked_mfile(struct loop_device *lo, struct request *rq)
 		else{
 
 		pr_info("Do lo_read_simple_mfile...\n");
-			return lo_read_simple_mfile(lo, rq, pos);
+			return lo_read_simple_mfile_try(lo, rq, pos);
 		}
 	default:
 		WARN_ON_ONCE(1);

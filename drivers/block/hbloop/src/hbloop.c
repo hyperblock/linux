@@ -181,6 +181,7 @@ static void hbloop_do_request(struct request_queue *q)
 			DEBUGP("hbloop_do_request: not connected to a file\n");
 			goto error_continue;
 		}
+		//add rq to working list
 		list_add_tail(&rq->queuelist, &hlo->hlo_list); /* Add to working list for thread */
 		wake_up(&hlo->hlo_event);    /* Wake up hbloop_thread */
 		continue; /* next request */
@@ -193,7 +194,7 @@ error_continue:
 /* Read header, flags and offsets from already opened file */
 static int hbloop_set_file(int hbloop_num, struct file *file)
 {
-	struct hbloop_device *clo = hbloop_dev[hbloop_num];
+	struct hbloop_device *hlo = hbloop_dev[hbloop_num];
 	struct inode *inode;
 	char *bbuf=NULL;
 	unsigned int bbuf_size = 0;
@@ -201,7 +202,7 @@ static int hbloop_set_file(int hbloop_num, struct file *file)
 	unsigned int i, offsets_read=0, total_offsets=0;
 	loff_t fs_read_position = 0, header_pos[2];
 	int isblkdev, bytes_read, error = 0;
-	if (clo->suspended) return error;
+	if (hlo->suspended) return error;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)
 	inode = file->f_dentry->d_inode;
 	clo->underlying_filename = kstrdup(file->f_dentry->d_name.name ? file->f_dentry->d_name.name : (const unsigned char *)"anonymous filename", GFP_KERNEL);

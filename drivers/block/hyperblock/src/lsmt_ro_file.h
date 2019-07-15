@@ -97,6 +97,9 @@ struct lsmt_ro_file *open_files(void **files, size_t n, bool ownership);
 
 size_t lsmt_pread(struct lsmt_ro_file *file, 
                 void *buf, size_t nbytes, off_t offset);
+size_t lsmt_pread_try(struct lsmt_ro_file *file, 
+                void *buf, size_t nbytes, loff_t *poffset);
+
 
 size_t lsmt_iter_read(struct lsmt_ro_file *file, 
 	struct iov_iter * iter, loff_t *ppos, int type);
