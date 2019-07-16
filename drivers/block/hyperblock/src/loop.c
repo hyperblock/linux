@@ -1508,14 +1508,17 @@ static struct lsmt_ro_file *loop_init_lsmtfile(struct loop_device *lo, const str
 	struct loop_mfile_fds  *mfds;
 	struct lsmt_ro_file *ro = NULL;
 	struct file **files = NULL;
-
+	
+	//First copy to kfds, only to get total file count
 	if (!access_ok(VERIFY_READ, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	if(copy_from_user(&kfds, arg, sizeof(struct loop_mfile_fds))) return NULL;
 	IMAGE_RO_LAYERS = kfds.mfcnt;
 	pr_info("Now we have %d files in lsmt_ro_file \n",IMAGE_RO_LAYERS);
 
+
 	mfds = kvmalloc(sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS,GFP_KERNEL);
 	if (!access_ok(VERIFY_READ, arg->fds, sizeof(int) * IMAGE_RO_LAYERS )) return NULL;
+	//now copy all the mem from userspace 
 	if(copy_from_user(mfds, arg, sizeof(struct loop_mfile_fds) + sizeof(int) * IMAGE_RO_LAYERS)) return NULL;
 
 	files = kvmalloc(sizeof(struct file *) * IMAGE_RO_LAYERS, GFP_KERNEL);
@@ -2258,7 +2261,16 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 	pr_info("filenames[%lu] = %s\n", 0, info64.mfile.filenames[0]);
 	#endif
 
+	for(i=0; i<n; i++){
+		//if(!access_ok(VERIFY_READ, arg->mfile.filenames[i], LO_NAME_SIZE)) return NULL;
+		if(!access_ok(VERIFY_READ, (char *)info64.mfile.filenames[i], LO_NAME_SIZE)) return NULL;
+		//if(copy_from_user((char *)fns[i], arg->mfile.filenames[i], LO_NAME_SIZE)) return NULL;
+		if(copy_from_user((char *)fns[i], (char *)info64.mfile.filenames[i], LO_NAME_SIZE)) return NULL;
+	}
+
+	#if 0
 	uint64_t **tgts = kvmalloc(sizeof(char *)*n,GFP_KERNEL);
+	//char **tgts = kvmalloc(sizeof(char *)*n,GFP_KERNEL);
 	for(i=0; i<n; i++){
 		pr_info("here\n");
 		//if(copy_from_user(tgt[i], fns + i*sizeof(char *), sizeof(char *))){
@@ -2279,6 +2291,10 @@ loop_set_status64_mfile(struct loop_device *lo, const struct loop_info64 __user 
 		pr_info("filenames[%lu] = %s\n", i, info64.mfile.filenames[i]);
 	}	
 	kvfree(tgts);
+	#endif
+
+
+
 	return loop_set_status_mfile(lo, &info64);
 }
 
