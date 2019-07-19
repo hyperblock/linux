@@ -122,6 +122,8 @@ struct loop_info64 {
 #define LOOP_SET_CAPACITY_MFILE		0x4C17
 #define LOOP_SET_DIRECT_IO_MFILE	0x4C18
 #define LOOP_SET_BLOCK_SIZE_MFILE	0x4C19
+#define LOOP_USE_MFILE                  0x4C20
+
 
 /* /dev/loop-control interface */
 #define LOOP_CTL_ADD		0x4C80

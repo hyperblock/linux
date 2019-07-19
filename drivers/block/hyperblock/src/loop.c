@@ -2428,6 +2428,10 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		if (!err)
 			goto out_unlocked;
 		break;
+	case LOOP_USE_MFILE:
+		err = 0;
+		if (lo->lo_lsmt_ro_file!=NULL) err = 1;
+		break;
 	case LOOP_CLR_FD_MFILE:
 		err = loop_clr_fd_mfile(lo);
 		if (!err)
