@@ -178,6 +178,71 @@ static void __loop_disable_dio(struct loop_device *lo)
 }
 
 
+static void __loop_update_dio_mfile(struct loop_device *lo, bool dio)
+{
+	// use the first backing file as example
+	struct file *file = lo->lo_backing_files[0];
+	struct address_space *mapping = file->f_mapping;
+	struct inode *inode = mapping->host;
+	unsigned short sb_bsize = 0;
+	unsigned dio_align = 0;
+	bool use_dio;
+	int i;
+
+	if (inode->i_sb->s_bdev) {
+		sb_bsize = bdev_logical_block_size(inode->i_sb->s_bdev);
+		dio_align = sb_bsize - 1;
+	}
+
+	/*
+	 * We support direct I/O only if lo_offset is aligned with the
+	 * logical I/O size of backing device, and the logical block
+	 * size of loop is bigger than the backing device's and the loop
+	 * needn't transform transfer.
+	 *
+	 * TODO: the above condition may be loosed in the future, and
+	 * direct I/O may be switched runtime at that time because most
+	 * of requests in sane applications should be PAGE_SIZE aligned
+	 */
+	if (dio) {
+		if (queue_logical_block_size(lo->lo_queue) >= sb_bsize &&
+				!(lo->lo_offset & dio_align) &&
+				mapping->a_ops->direct_IO &&
+				!lo->transfer)
+			use_dio = true;
+		else
+			use_dio = false;
+	} else {
+		use_dio = false;
+	}
+	pr_info("use_dio is %d\n",use_dio);
+	if (lo->use_dio == use_dio)
+		return;
+
+	/* flush dirty pages before changing direct IO */
+	//	vfs_fsync(file, 0);
+	for (i=0;i<lo->mfile.mfcnt;i++){
+		vfs_fsync(lo->lo_backing_files[i], 0);
+		pr_info("(filp->f_flags & O_DIRECT) is %d\n",(lo->lo_backing_files[i]->f_flags & O_DIRECT));
+	}
+
+	/*
+	 * The flag of LO_FLAGS_DIRECT_IO is handled similarly with
+	 * LO_FLAGS_READ_ONLY, both are set from kernel, and losetup
+	 * will get updated by ioctl(LOOP_GET_STATUS)
+	 */
+	blk_mq_freeze_queue(lo->lo_queue);
+	lo->use_dio = use_dio;
+	if (use_dio) {
+		blk_queue_flag_clear(QUEUE_FLAG_NOMERGES, lo->lo_queue);
+		lo->lo_flags |= LO_FLAGS_DIRECT_IO;
+	} else {
+		blk_queue_flag_set(QUEUE_FLAG_NOMERGES, lo->lo_queue);
+		lo->lo_flags &= ~LO_FLAGS_DIRECT_IO;
+	}
+	blk_mq_unfreeze_queue(lo->lo_queue);
+}
+
 static void __loop_update_dio(struct loop_device *lo, bool dio)
 {
 	struct file *file = lo->lo_backing_file;
@@ -460,46 +525,6 @@ static int lo_read_simple(struct loop_device *lo, struct request *rq,
 	return 0;
 }
 
-//note that no write for lsmt
-size_t lsmt_iter_pread(struct lsmt_ro_file *file, 
-	struct iov_iter * iter, loff_t *ppos, int type)
-{
-
-
-#if 1
-
-	ssize_t ret = 0;
-	ASSERT(type == 0);//only do read
-
-
-
-	while (iov_iter_count(iter)) {
-		struct iovec iovec = iov_iter_iovec(iter);
-		ssize_t nr;
-
-		pr_info("lsmt_ro_file->m_vsize is %llu\n",file->m_vsize);
-		pr_info("iovec.iov_base is %llu, iovec.iov_len is %llu\n",iovec.iov_base,iovec.iov_len);
-
-		//read is 0 write is 1
-		nr = lsmt_pread(file, iovec.iov_base, iovec.iov_len, *ppos);
-		//lsmt_pread(ro, p, ALIGNMENT, o + i * ALIGNMENT);   
-
-		if (nr < 0) {
-			if (!ret)
-				ret = nr;
-			break;
-		}
-		ret += nr;
-		if (nr != iovec.iov_len)
-			break;
-		iov_iter_advance(iter, nr);
-	}
-
-	return ret;
-#endif
-
-}
-
 
 static int lo_read_simple_mfile_try(struct loop_device *lo, struct request *rq,
 		loff_t pos)
@@ -532,47 +557,6 @@ static int lo_read_simple_mfile_try(struct loop_device *lo, struct request *rq,
 
 	return 0;
 }
-
-
-
-static int lo_read_simple_mfile(struct loop_device *lo, struct request *rq,
-		loff_t pos)
-{
-	struct bio_vec bvec;
-	struct req_iterator iter;
-	struct iov_iter i;
-	ssize_t len;
-
-	rq_for_each_segment(bvec, rq, iter) {
-		//init iov_iter i with bvec, length is bvec.bv_len
-		iov_iter_bvec(&i, ITER_BVEC, &bvec, 1, bvec.bv_len);
-		pr_info("Before lsmt_iter_pread, pos is %lx",pos);
-		//len = lsmt_iter_pread(lo->lo_lsmt_ro_file, &i, &pos, 0); 
-		len = lsmt_iter_read(lo->lo_lsmt_ro_file, &i, &pos,0);
-
-		//len = vfs_iter_read(lo->lo_backing_files[0], &i, &pos, 0);
-
-		pr_info("After lsmt_iter_pread, len is %llu",len);
-		
-//		len = vfs_iter_read(lo->lo_backing_file, &i, &pos, 0);
-		if (len < 0)
-			return len;
-
-		flush_dcache_page(bvec.bv_page);
-
-		if (len != bvec.bv_len) {
-			struct bio *bio;
-
-			__rq_for_each_bio(bio, rq)
-				zero_fill_bio(bio);
-			break;
-		}
-		cond_resched();
-	}
-
-	return 0;
-}
-
 
 
 static int lo_read_transfer(struct loop_device *lo, struct request *rq,
@@ -1078,6 +1062,13 @@ static inline void loop_update_dio(struct loop_device *lo)
 	__loop_update_dio(lo, io_is_direct(lo->lo_backing_file) |
 			lo->use_dio);
 }
+
+static inline void loop_update_dio_mfile(struct loop_device *lo)
+{
+	__loop_update_dio_mfile(lo, io_is_direct(lo->lo_backing_files[0]) |
+			lo->use_dio);
+}
+
 
 static void loop_reread_partitions(struct loop_device *lo,
 				   struct block_device *bdev)
@@ -1642,7 +1633,7 @@ static int loop_set_fd_mfile(struct loop_device *lo, fmode_t mode,
 		blk_queue_write_cache(lo->lo_queue, true, false);
 
 
-//	loop_update_dio(lo);
+	loop_update_dio_mfile(lo);
 	set_capacity(lo->lo_disk, size);
 	bd_set_size(bdev, size << 9);
 	loop_sysfs_init(lo);
@@ -1882,7 +1873,6 @@ static int loop_clr_fd_mfile(struct loop_device *lo)
 	 * lock dependency possibility warning as fput can take
 	 * bd_mutex which is usually taken before lo_ctl_mutex.
 	 */
-	//fput(filp);
 	for(i=0;i<n;i++)
 	{
 		fput(filps[i]);
@@ -2062,9 +2052,8 @@ loop_set_status_mfile(struct loop_device *lo, const struct loop_info64 *info)
 	}
 
 	/* update dio if lo_offset or transfer is changed */
-	//__loop_update_dio(lo, lo->use_dio);
-	// no need dio in hyperblock
-	pr_info("here\n");
+	__loop_update_dio_mfile(lo, lo->use_dio);
+	pr_info("------------------after __loop_update_dio_mfile\n");
  exit:
 	blk_mq_unfreeze_queue(lo->lo_queue);
 	pr_info("here\n");
@@ -2366,6 +2355,23 @@ static int loop_set_capacity(struct loop_device *lo)
 	return figure_loop_size(lo, lo->lo_offset, lo->lo_sizelimit);
 }
 
+
+static int loop_set_dio_mfile(struct loop_device *lo, unsigned long arg)
+{
+	int error = -ENXIO;
+	if (lo->lo_state != Lo_bound)
+		goto out;
+
+	__loop_update_dio_mfile(lo, !!arg);
+	if (lo->use_dio == !!arg)
+		return 0;
+	error = -EINVAL;
+ out:
+	return error;
+}
+
+
+
 static int loop_set_dio(struct loop_device *lo, unsigned long arg)
 {
 	int error = -ENXIO;
@@ -2474,8 +2480,13 @@ static int lo_ioctl(struct block_device *bdev, fmode_t mode,
 		break;
 	case LOOP_SET_DIRECT_IO:
 		err = -EPERM;
-		if ((mode & FMODE_WRITE) || capable(CAP_SYS_ADMIN))
-			err = loop_set_dio(lo, arg);
+		if ((mode & FMODE_WRITE) || capable(CAP_SYS_ADMIN)){
+			if(lo->lo_lsmt_ro_file!=NULL){
+				err = loop_set_dio_mfile(lo, arg);
+			} else {
+				err = loop_set_dio(lo, arg);
+			}
+		}
 		break;
 	case LOOP_SET_BLOCK_SIZE:
 		err = -EPERM;

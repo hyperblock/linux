@@ -708,111 +708,6 @@ error_ret:
 }
 
 
-#if 0
-size_t lsmt_iter_read(struct lsmt_ro_file *file, 
-	struct iov_iter * iter, loff_t *ppos, int type)
-{
-	//ssize_t ret = 0;
-	struct kiocb kiocb;
-	ssize_t ret;
-
-	init_sync_kiocb(&kiocb, flags);
-	if (ret)
-		return ret;
-	kiocb.ki_pos = *ppos;
-
-	if(type==READ)
-
-
-}
-#endif
-
-//this function peers to vfs_iter_read
-size_t lsmt_iter_read(struct lsmt_ro_file *file, 
-	struct iov_iter * iter, loff_t *ppos, int type)
-{
-	ssize_t ret = 0;
-	ASSERT(type == 0);//only do read
-//iov_iter from loop device --> buf and offset in lsmt --> iov_iter to use in vfs_iter_read
-    	size_t readn = 0;
-    	int NMAPPING = 16;
-	char *data = NULL;
-	size_t nbytes = 0;
-	if(uaccess_kernel()){
-		struct kvec * kv;
-		kv = iter->kvec;
-		data = kv->iov_base;
-		nbytes = iter->kvec->iov_len;
-	} else {
-		data = iter->iov->iov_base;
-		nbytes = iter->iov->iov_len;	
-	}
-
-
-	pr_info("initial pos is %x, size is ",*ppos);
-
-	off_t offset = *ppos; 
-        struct segment_mapping mapping[NMAPPING];
-	struct segment s = { (uint64_t)offset / ALIGNMENT, (uint32_t)nbytes / ALIGNMENT };
-        
-        while (true){
-                int n = ro_index_lookup(file->m_index, &s, mapping, NMAPPING);
-		int i;
-                for (i=0; i<n; i++){
-			//fill in unmapped area
-                        if (s.offset < mapping[i].offset){
-                                size_t length = (mapping[i].offset - s.offset) 
-                                        * ALIGNMENT;
-                                memset((void *)data, 0, length);
-                                data += length;
-                                readn += length;
-                        }
-                        void *fd = file->m_files[mapping[i].tag];
-                        ssize_t size = mapping[i].length * ALIGNMENT;
-                        ssize_t read = 0;
-			//now init iov_iter for vfs_iter_read
-			struct iovec iov = { .iov_base = data, .iov_len = size };
-			loff_t pos = mapping[i].moffset * ALIGNMENT;
-			//init with new iov 
-			iov_iter_init(iter, READ, &iov, 1, size);	
-                        if (mapping[i].zeroed == 0){
-				pr_info("Before do vfs_iter_read pos is %x, size is %x",pos,size);
-				read = vfs_iter_read(fd, iter, &pos,0);
-                                if (read < size) {
-#ifndef __KERNEL__
-					PRINT_ERROR("read %d-th file error."\
-                                                "(%ld < %ld) errno: %d msg: %s",
-                                                mapping[i].tag, read, size, 
-                                                errno, strerror(errno));
-#else
-					PRINT_ERROR("read %d-th file error."\
-                                                "(%ld < %ld) Read is %d",
-                                                mapping[i].tag, read, size, 
-                                                read);
-#endif
-                                        return -1;
-                                }
-                        } else {
-                                read = size;
-                                memset(data, 0, size);
-                        }
-                        readn += read;
-                        data += size;
-                        forward_offset_to(&s, segment_end(&mapping[i]), 
-                                TYPE_SEGMENT);
-                }
-                if (n < NMAPPING) break;
-        }
-        if (s.length > 0){
-                size_t length = s.length * ALIGNMENT;
-                memset(data, 0, length);
-                data += length;
-                readn += length;
-        }  
-        return readn;
-}
-
-
 size_t lsmt_pread_try(struct lsmt_ro_file *file, 
                 void *buf, size_t nbytes, loff_t *poffset)
 {
@@ -829,7 +724,7 @@ size_t lsmt_pread_try(struct lsmt_ro_file *file,
                 return -1;
         }
         while (nbytes > file->MAX_IO_SIZE){
-                size_t read = lsmt_pread(file, data, file->MAX_IO_SIZE, *poffset);
+                size_t read = lsmt_pread_try(file, data, file->MAX_IO_SIZE, *poffset);
                 if (read < file->MAX_IO_SIZE){
                         PRINT_ERROR("read data error: (return %lu < %lu )",
                                 read, file->MAX_IO_SIZE);
@@ -892,86 +787,6 @@ size_t lsmt_pread_try(struct lsmt_ro_file *file,
                 readn += length;
         }  
 	*poffset += readn;
-        return readn;
-}
-
-size_t lsmt_pread(struct lsmt_ro_file *file, 
-                void *buf, size_t nbytes, off_t offset)
-{
-	
-        size_t readn = 0;
-        int NMAPPING = 16;
-        char *data = (char *)buf;
-        struct segment_mapping mapping[NMAPPING];
-        if ((nbytes | offset) & (ALIGNMENT - 1)) {
-                PRINT_ERROR("count(%lu) and offset(%llu) must be aligned", 
-                        nbytes, offset);
-                //exit(0);
-                return -1;
-        }
-        while (nbytes > file->MAX_IO_SIZE){
-                size_t read = lsmt_pread(file, data, file->MAX_IO_SIZE, offset);
-                if (read < file->MAX_IO_SIZE){
-                        PRINT_ERROR("read data error: (return %lu < %lu )",
-                                read, file->MAX_IO_SIZE);
-                        return -1;
-                }
-                data += read;
-                offset += read;
-                nbytes -= read;
-                readn += read;
-        }
-        
-	struct segment s = { (uint64_t)offset / ALIGNMENT, (uint32_t)nbytes / ALIGNMENT };
-        
-        while (true){
-                int n = ro_index_lookup(file->m_index, &s, mapping, NMAPPING);
-		int i;
-                for (i=0; i<n; i++){
-                        if (s.offset < mapping[i].offset){
-                                size_t length = (mapping[i].offset - s.offset) 
-                                        * ALIGNMENT;
-                                memset((void *)data, 0, length);
-                                data += length;
-                                readn += length;
-                        }
-                        void *fd = file->m_files[mapping[i].tag];
-                        ssize_t size = mapping[i].length * ALIGNMENT;
-                        ssize_t read = 0;
-                        if (mapping[i].zeroed == 0){
-                                read = _lsmt_pread(fd, data, size, 
-                                                mapping[i].moffset * ALIGNMENT);
-                                if (read < size) {
-#ifndef __KERNEL__
-					PRINT_ERROR("read %d-th file error."\
-                                                "(%ld < %ld) errno: %d msg: %s",
-                                                mapping[i].tag, read, size, 
-                                                errno, strerror(errno));
-#else
-					PRINT_ERROR("read %d-th file error."\
-                                                "(%ld < %ld) Read is %d",
-                                                mapping[i].tag, read, size, 
-                                                read);
-#endif
-                                        return -1;
-                                }
-                        } else {
-                                read = size;
-                                memset(data, 0, size);
-                        }
-                        readn += read;
-                        data += size;
-                        forward_offset_to(&s, segment_end(&mapping[i]), 
-                                TYPE_SEGMENT);
-                }
-                if (n < NMAPPING) break;
-        }
-        if (s.length > 0){
-                size_t length = s.length * ALIGNMENT;
-                memset(data, 0, length);
-                data += length;
-                readn += length;
-        }  
         return readn;
 }
 
