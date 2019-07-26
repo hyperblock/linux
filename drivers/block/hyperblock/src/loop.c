@@ -880,7 +880,7 @@ static int lo_rw_aio(struct loop_device *lo, struct loop_cmd *cmd,
 static int lo_rw_aio_mfile(struct loop_device *lo, struct loop_cmd *cmd,
 		     loff_t pos, bool rw)
 {
-	BUG_ON(1);
+
 	struct iov_iter iter;
 	struct bio_vec *bvec;
 	struct request *rq = blk_mq_rq_from_pdu(cmd);
@@ -925,6 +925,9 @@ static int lo_rw_aio_mfile(struct loop_device *lo, struct loop_cmd *cmd,
 	}
 	atomic_set(&cmd->ref, 2);
 
+
+#if 0
+
 	iov_iter_bvec(&iter, ITER_BVEC | rw, bvec,
 		      segments, blk_rq_bytes(rq));
 	iter.iov_offset = offset;
@@ -935,11 +938,46 @@ static int lo_rw_aio_mfile(struct loop_device *lo, struct loop_cmd *cmd,
 	cmd->iocb.ki_flags = IOCB_DIRECT;
 	if (cmd->css)
 		kthread_associate_blkcg(cmd->css);
+#endif
 
+	//Oirginally iter will do all bvecs in a rq, but here we'll do one bvec at a time.
+	//The problem is what to do with iocb
+
+
+	struct bio_vec bvec;
+	struct req_iterator iter;
+	struct iov_iter i;
+	ssize_t len;
+
+	rq_for_each_segment(bvec, rq, iter) {
+
+                unsigned long length = bvec.bv_len;
+		char *to_ptr      = kmap(bvec.bv_page) + bvec.bv_offset;
+		pr_info("Before lsmt_iter_pread, pos is %lx, bvec.bv_len is %lx ", pos, bvec.bv_len);
+		len = lsmt_pread_try(lo->lo_lsmt_ro_file, to_ptr, length, &pos);	
+		pr_info("After lsmt_iter_pread, pos is %lx",pos);
+		if (len < 0)
+			return len;
+		kunmap(bvec.bv_page);
+
+		if (len != bvec.bv_len) {
+			struct bio *bio;
+
+			__rq_for_each_bio(bio, rq)
+				zero_fill_bio(bio);
+			break;
+		}
+		cond_resched();
+	}
+
+
+
+#if 0
 	if (rw == WRITE)
 		ret = call_write_iter(file, &cmd->iocb, &iter);
 	else
 		ret = call_read_iter(file, &cmd->iocb, &iter);
+#endif
 
 	lo_rw_aio_do_completion(cmd);
 	kthread_associate_blkcg(NULL);

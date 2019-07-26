@@ -708,6 +708,14 @@ error_ret:
 }
 
 
+static inline ssize_t call_lsmt_read_iter(struct lsmt_ro_file *file, struct kiocb *kio, 
+		                                     struct iov_iter *iter)         
+{   
+
+	return file->f_op->read_iter(kio, iter);
+}   
+    
+
 size_t lsmt_pread_try(struct lsmt_ro_file *file, 
                 void *buf, size_t nbytes, loff_t *poffset)
 {
