@@ -18,6 +18,7 @@ obj-$(CONFIG_BLK_DEV_RAM)	+= brd.o
 #obj-$(CONFIG_BLK_DEV_LOOP)	+= lsmt_ro_file.o loop.o
 obj-$(CONFIG_BLK_DEV_LOOP)	+= hyperblock/
 obj-$(CONFIG_HYPERBLOCK)	+= hyperblock/
+obj-$(CONFIG_HYPERBLOCK)	+= hbloop/
 obj-$(CONFIG_BLK_DEV_DAC960)	+= DAC960.o
 obj-$(CONFIG_XILINX_SYSACE)	+= xsysace.o
 obj-$(CONFIG_CDROM_PKTCDVD)	+= pktcdvd.o
